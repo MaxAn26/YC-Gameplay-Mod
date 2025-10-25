@@ -27,4 +27,14 @@ public static class UnityExtensions {
 
         return result is not null;
     }
+
+    public static void AddComponentWithAction<T>(this GameObject gameObject, Action<T> action)
+        where T : Il2CppObjectBase {
+        if (!gameObject.TryGetComponentWithCast(out T? component)) {
+            component = gameObject.AddComponent(Il2CppType.From(typeof(T))).TryCast<T>();
+        }
+
+        if (component is not null)
+            action?.Invoke(component);
+    }
 }

@@ -13,6 +13,8 @@ internal class RandomReverseMod {
     internal static ConfigEntry<bool> Enabled;
     internal static ConfigEntry<bool> IgnoreAtSameRoles;
     internal static ConfigEntry<bool> AlwaysAtSameRoles;
+    internal static ConfigEntry<bool> AlwaysInCommandPose;
+    internal static ConfigEntry<bool> AlwaysWhenTargetCharmed;
     internal static ConfigEntry<int> Chance;
     #endregion
 
@@ -28,6 +30,10 @@ internal class RandomReverseMod {
                 new ConfigDescription("Do not activate when the enemy's role matches the player's role", new AcceptableValueList<bool>([true, false])));
             AlwaysAtSameRoles = config.Bind(nameof(RandomReverseMod), nameof(AlwaysAtSameRoles), false,
                 new ConfigDescription("Always activate when the enemy's role matches the player's role", new AcceptableValueList<bool>([true, false])));
+            AlwaysInCommandPose = config.Bind(nameof(RandomReverseMod), nameof(AlwaysInCommandPose), true,
+                new ConfigDescription("Always activate when positions has tag Command", new AcceptableValueList<bool>([true, false])));
+            AlwaysWhenTargetCharmed = config.Bind(nameof(RandomReverseMod), nameof(AlwaysWhenTargetCharmed), true,
+                new ConfigDescription("Always activate when Target is charmed", new AcceptableValueList<bool>([true, false])));
             Chance = config.Bind(nameof(RandomReverseMod), nameof(Chance), 20,
                 new ConfigDescription("Chance for animation reversal", new AcceptableValueRange<int>(0, 100)));
 
@@ -36,19 +42,22 @@ internal class RandomReverseMod {
         }
     }
 
-    internal static void Apply(SexSystem sexSystem) {
+    internal static void Apply(SexEncounter sexEncounter) {
         try {
             if (!Enabled.Value || SceneManager.GetActiveScene().buildIndex < 2)
                 return;
 
-            if (sexSystem.playerSex.IsBoundHeavyRestraint > 0 || SexSystem.GameOver)
+            if (sexEncounter.TargetSex.IsBoundHeavyRestraint > 0)
                 return;
 
-            if (IgnoreAtSameRoles.Value && sexSystem.CasterActive == sexSystem.TargetActive)
+            if (IgnoreAtSameRoles.Value && sexEncounter.CasterActive == sexEncounter.TargetActive)
                 return;
 
-            if ( AlwaysAtSameRoles.Value && sexSystem.CasterActive == sexSystem.TargetActive || RandomUtils.Chance(Chance.Value)) {
-                SexSystem.ReverseMode = !SexSystem.ReverseMode;
+            if ( AlwaysAtSameRoles.Value && sexEncounter.CasterActive == sexEncounter.TargetActive 
+                    || (AlwaysInCommandPose.Value && sexEncounter.CurrentMove.isCommand)
+                    || (AlwaysWhenTargetCharmed.Value && sexEncounter.TargetSex.IsCharmed)
+                    || RandomUtils.Chance(Chance.Value)) {
+                sexEncounter.ReverseMode = !sexEncounter.ReverseMode;
                 Plugin.Log.Info("Reverse mod activated");
             }
 

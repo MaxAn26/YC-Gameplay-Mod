@@ -13,7 +13,7 @@ using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 using YC.GameplayMod.Mods;
-using YC.GameplayMod.Plugins;
+using YC.GameplayMod.Patches;
 
 namespace YC.GameplayMod;
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
@@ -32,12 +32,13 @@ public class Plugin : BasePlugin {
         PluginConfigs = Path.Combine(baseDirectory, "Configs");
         PluginResources = Path.Combine(baseDirectory, "Resources");
 
+        DickStraponVisibilityMod.Load(Config);
         RandomReverseMod.Load(Config);
         SexChoiceRealismMod.Load(Config);
 
         Harmony.PatchAll(typeof(BattleManagerPatch));
         Harmony.PatchAll(typeof(CharacterSexPatch));
-        Harmony.PatchAll(typeof(SexSystemPatch));
+        Harmony.PatchAll(typeof(SexEncounterPatch));
 
         SceneManager.sceneLoaded += (UnityAction<Scene, LoadSceneMode>)OnSceneLoaded;
         Log.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
@@ -46,6 +47,7 @@ public class Plugin : BasePlugin {
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
         Log.Info($"Scene loaded: Name: {scene.name}, BuildIndex: {scene.buildIndex}");
         if (scene.buildIndex >= 2) {
+            SexChoiceRealismMod.Prepare();
         }
     }
 }

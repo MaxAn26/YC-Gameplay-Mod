@@ -5,7 +5,7 @@ using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 
 using YC.EnemyRandomizerMod.Mods;
-using YC.EnemyRandomizerMod.Plugins;
+using YC.EnemyRandomizerMod.Patches;
 
 namespace YC.EnemyRandomizerMod;
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
@@ -19,7 +19,7 @@ public class Plugin : BasePlugin {
 
         EnemyBodyRandomizerMod.Load(Config);
 
-        Harmony.PatchAll(typeof(EnemyWardrobePatch));
+        Harmony.PatchAll(typeof(CombatEnemyManagerPatch));
 
         Log.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }

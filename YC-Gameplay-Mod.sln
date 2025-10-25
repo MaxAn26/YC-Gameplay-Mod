@@ -1,11 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36310.24 d17.14
+VisualStudioVersion = 17.14.36310.24
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BaseMod.Core", "BaseMod.Core\BaseMod.Core.csproj", "{91F0566E-BEAE-6F25-2B86-1F43E72FC92D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YC.GameplayMod", "YC.GameplayMod\YC.GameplayMod.csproj", "{1B51830C-64F6-4333-A708-82CFC6C1592B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YC.EnemyRandomizerMod", "YC.EnemyRandomizerMod\YC.EnemyRandomizerMod.csproj", "{46FFF45F-87C9-4E60-9F74-FB67B49F522F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YC.Unloader", "YC.Unloader\YC.Unloader.csproj", "{513B39B1-D92D-4305-96BD-2B39DC93C2DE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +25,12 @@ Global
 		{1B51830C-64F6-4333-A708-82CFC6C1592B}.Debug|x64.Build.0 = Debug|x64
 		{1B51830C-64F6-4333-A708-82CFC6C1592B}.Release|x64.ActiveCfg = Release|x64
 		{1B51830C-64F6-4333-A708-82CFC6C1592B}.Release|x64.Build.0 = Release|x64
+		{46FFF45F-87C9-4E60-9F74-FB67B49F522F}.Debug|x64.ActiveCfg = Debug|x64
+		{46FFF45F-87C9-4E60-9F74-FB67B49F522F}.Debug|x64.Build.0 = Debug|x64
+		{46FFF45F-87C9-4E60-9F74-FB67B49F522F}.Release|x64.ActiveCfg = Release|x64
+		{46FFF45F-87C9-4E60-9F74-FB67B49F522F}.Release|x64.Build.0 = Release|x64
+		{513B39B1-D92D-4305-96BD-2B39DC93C2DE}.Debug|x64.ActiveCfg = Debug|x64
+		{513B39B1-D92D-4305-96BD-2B39DC93C2DE}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

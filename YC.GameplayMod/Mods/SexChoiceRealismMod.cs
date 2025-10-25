@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 
@@ -10,10 +11,10 @@ using BepInEx.Configuration;
 
 using Il2CppInterop.Runtime;
 
-using SexInteractionMod.Models;
-
 using UnityEngine;
 using UnityEngine.SceneManagement;
+
+using YC.GameplayMod.Models;
 
 namespace YC.GameplayMod.Mods;
 internal class SexChoiceRealismMod {
@@ -26,12 +27,14 @@ internal class SexChoiceRealismMod {
     #region States
     internal static bool IsModActive => Enabled.Value;
     internal static List<SexMoveExtended> SexMoves { get; set; } = [];
+    internal static List<PersonalitySexTags> PersonalitySexTypes { get; set; } = [];
     #endregion
 
     #region Storage
     internal static CharacterDataa Character => CharacterDataa.Instance;
     internal static SexSystem SexSystem;
     internal static int LastSexType = 0;
+    internal static SexMoveExtended LastMove;
     #endregion
 
     internal static void Load(ConfigFile config) {
@@ -94,20 +97,26 @@ internal class SexChoiceRealismMod {
                 if (!Character.statusDATA.DislikedSex.Contains(sexMove.ID) && !Character.statusDATA.DislikedThreesomeSex.Contains(sexMove.ID))
                     SexMoves.Add(sexMove);
             }
+
+            if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "PersonalitySexTags.json", out List<PersonalitySexTags> personalitySexTypes)) {
+                personalitySexTypes = GetPersonalitySexTypes();
+                JsonUtils.TrySerialize(Plugin.PluginResources, "PersonalitySexTags.json", personalitySexTypes);
+            }
+            PersonalitySexTypes = personalitySexTypes;
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
         }
     }
 
-    internal static void SetSexID() {
+    internal static void SetSexID(SexEncounter sexEncounter) {
         try {
             if (!Enabled.Value || SceneManager.GetActiveScene().buildIndex < 2) {
                 Plugin.Log.Info("Exit due execute condition");
                 return;
             }
 
-            if (SexSystem is null) {
-                Plugin.Log.Info("Exit due SexSystem is NULL");
+            if (sexEncounter is null) {
+                Plugin.Log.Info("Exit due SexEncounter is NULL");
                 return;
             }
 
@@ -116,28 +125,40 @@ internal class SexChoiceRealismMod {
                 return;
             }
 
-            var move = GetSexMove();
+            if (!sexEncounter.CasterSex.IsMale && !sexEncounter.CasterSex.IsFuta) {
+                Plugin.Log.Info("Reset Caster Active/Futa for strapon");
+                sexEncounter.CasterActive = false;
+                sexEncounter.CasterFuta = false;
+            }
+
+            if (!sexEncounter.TargetSex.IsMale && !sexEncounter.TargetSex.IsFuta) {
+                Plugin.Log.Info("Reset Target Active/Futa for strapon");
+                sexEncounter.TargetActive = false;
+                sexEncounter.TargetFuta = false;
+            }
+
+            var move = GetSexMove(sexEncounter);
             if (move is null) {
                 Plugin.Log.Info("Exit due SexMove is null");
                 return;
             }
 
             Plugin.Log.Info($"Set SexMove: ID: {move.ID}({move.Type}) Name: '{move.Name}'");
-            SexSystem.SexType = move.Type;
-            SexSystem.SexID = move.ID;
+            sexEncounter.SexType = move.Type;
+            sexEncounter.SexID = move.ID;
         } catch (Exception ex) {
             Plugin.Log.Error(ex);
         }
     }
 
-    internal static void SetThreesomeSexID() {
+    internal static void SetThreesomeSexID(SexEncounter sexEncounter) {
         try {
             if (!Enabled.Value || SceneManager.GetActiveScene().buildIndex < 2) {
                 Plugin.Log.Info("Exit due execute condition");
                 return;
             }
 
-            if (SexSystem is null) {
+            if (sexEncounter is null) {
                 Plugin.Log.Info("Exit due SexSystem is NULL");
                 return;
             }
@@ -147,15 +168,34 @@ internal class SexChoiceRealismMod {
                 return;
             }
 
-            var move = GetThreesomeSexMove();
+            int cums = Mathf.Min(sexEncounter.CasterSex.characterAttributes.cumsInSuccession, sexEncounter.TargetSex.characterAttributes.cumsInSuccession);
+            if (!sexEncounter.CasterSex.IsMale && !sexEncounter.CasterSex.IsFuta) {
+                Plugin.Log.Info("Reset Caster Active/Futa for strapon");
+                sexEncounter.CasterActive = false;
+                sexEncounter.CasterFuta = false;
+            }
+
+            if (!sexEncounter.TargetSex.IsMale && !sexEncounter.TargetSex.IsFuta) {
+                Plugin.Log.Info("Reset Target Active/Futa for strapon");
+                sexEncounter.TargetActive = false;
+                sexEncounter.TargetFuta = false;
+            }
+
+            if (!sexEncounter.AssistSex.IsMale && !sexEncounter.AssistSex.IsFuta) {
+                Plugin.Log.Info("Reset Assist Active/Futa for strapon");
+                sexEncounter.AssistActive = sexEncounter.CasterActive;
+                sexEncounter.AssistFuta = sexEncounter.CasterFuta;
+            }
+
+            var move = GetThreesomeSexMove(sexEncounter);
             if (move is null) {
                 Plugin.Log.Info("Exit due SexMove is null");
                 return;
             }
 
             Plugin.Log.Info($"Set SexMove: ID: {move.ID}({move.Type}) Name: '{move.Name}'");
-            SexSystem.SexType = move.Type;
-            SexSystem.SexID = move.ID;
+            sexEncounter.SexType = move.Type;
+            sexEncounter.SexID = move.ID;
         } catch (Exception ex) {
             Plugin.Log.Error(ex);
         }
@@ -201,74 +241,272 @@ internal class SexChoiceRealismMod {
         return poses;
     }
 
-    private static SexMoveExtended GetSexMove() {
-        List<SexMoveExtended> sexMoves = GetCharacterSexMoves( SexSystem.IsThreesome );
+    private static List<PersonalitySexTags> GetPersonalitySexTypes() {
+        List<PersonalitySexTags> personalitySexTypes = [];
+        personalitySexTypes.Add(new PersonalitySexTags() {
+            Id = 1,
+            Name = "Balanced",
+            PreferredTags = SexTag.Universal | SexTag.Sensual | SexTag.Service,
+            NeutralTags = SexTag.Spanking | SexTag.Dominant,
+            AvoidTags = SexTag.Smothering | SexTag.Wresting
+        });
+        personalitySexTypes.Add(new PersonalitySexTags() {
+            Id = 2,
+            Name = "Dominant",
+            PreferredTags = SexTag.Dominant | SexTag.Spanking | SexTag.Smothering | SexTag.Wresting,
+            NeutralTags = SexTag.Sensual | SexTag.Universal,
+            AvoidTags = SexTag.Service
+        });
+        personalitySexTypes.Add(new PersonalitySexTags() {
+            Id = 3,
+            Name = "Defensive",
+            PreferredTags = SexTag.Service | SexTag.Sensual | SexTag.Universal,
+            NeutralTags = SexTag.Smothering,
+            AvoidTags = SexTag.Dominant | SexTag.Wresting | SexTag.Spanking
+        });
+        personalitySexTypes.Add(new PersonalitySexTags() {
+            Id = 4,
+            Name = "Passionate",
+            PreferredTags = SexTag.Sensual | SexTag.Dominant | SexTag.Spanking | SexTag.Smothering,
+            NeutralTags = SexTag.Universal,
+            AvoidTags = SexTag.Service | SexTag.Wresting
+        });
+        personalitySexTypes.Add(new PersonalitySexTags() {
+            Id = 5,
+            Name = "Submissive",
+            PreferredTags = SexTag.Service | SexTag.Sensual | SexTag.Universal,
+            NeutralTags = SexTag.Smothering,
+            AvoidTags = SexTag.Dominant | SexTag.Wresting | SexTag.Spanking
+        });
+        personalitySexTypes.Add(new PersonalitySexTags() {
+            Id = 6,
+            Name = "Trickster",
+            PreferredTags = SexTag.Wresting | SexTag.Smothering | SexTag.Spanking,
+            NeutralTags = SexTag.Dominant | SexTag.Service | SexTag.Sensual,
+            AvoidTags = SexTag.Universal
+        });
 
-        if (sexMoves.Count == 0)
+        return personalitySexTypes;
+    }
+
+    private static SexMoveExtended GetSexMove(SexEncounter sexEncounter) {
+        List<(SexMoveExtended move, int score)> sexMoves = GetCharacterSexMoves( sexEncounter );
+
+        if (sexMoves.Count <= 0)
             return null;
 
-        sexMoves.Shuffle();
-        var move = sexMoves.RandomItem();
+        var move = ChooseWeightedRandom(sexMoves);
         LastSexType = move.Type;
+        LastMove = move;
         return move;
     }
 
-    private static SexMoveExtended GetThreesomeSexMove() {
-        List<SexMoveExtended> sexMoves = GetCharacterSexMoves( SexSystem.IsThreesome ); //[];
+    private static SexMoveExtended GetThreesomeSexMove(SexEncounter sexEncounter ) {
+        List<(SexMoveExtended move, int score)> sexMoves = GetCharacterSexMoves( sexEncounter );
         
-        if (sexMoves.Count == 0)
+        if (sexMoves.Count <= 0)
             return null;
 
-        sexMoves.Shuffle();
-        var move = sexMoves.RandomItem();
+        var move = ChooseWeightedRandom(sexMoves);
         LastSexType = move.Type;
+        LastMove = move;
         return move;
     }
 
-    private static List<SexMoveExtended> GetCharacterSexMoves(bool isThreesome) {
-        List<SexMoveExtended> sexMoves = [];
-        CharacterGender caster = SexSystem.CasterActive ? CharacterGender.Male : CharacterGender.Female;
-        CharacterGender target = SexSystem.TargetActive ? CharacterGender.Male : CharacterGender.Female;
-        bool targetIsCharmed = SexSystem.Target.GetComponentWithCast<CharacterSex>()?.IsCharmed ?? false;
+    private static List<(SexMoveExtended move, int score)> GetCharacterSexMoves(SexEncounter sexEncounter ) {
+        List<(SexMoveExtended move, int score)> sexMoves = [];
+        CharacterGender casterGender = GetCharacterGender( sexEncounter.CasterSex );
+        CharacterRole casterRole = sexEncounter.CasterActive ? CharacterRole.Active : CharacterRole.Passive;
+        CharacterStatus casterStatus = GetCharacterStatus( sexEncounter.CasterAttributes );
+        CharacterGender targetGender = GetCharacterGender( sexEncounter.TargetSex );
+        CharacterRole targetRole = sexEncounter.TargetActive ? CharacterRole.Active : CharacterRole.Passive;
+        CharacterStatus targetStatus = GetCharacterStatus( sexEncounter.TargetAttributes );
+        CharacterGender assistGender = sexEncounter.IsThreesome ? GetCharacterGender( sexEncounter.AssistSex ) : CharacterGender.Any;
+        CharacterRole assistRole = sexEncounter.IsThreesome 
+            ? sexEncounter.AssistActive ? CharacterRole.Active : CharacterRole.Passive
+            : CharacterRole.Any;
+
+        bool allowCommand = targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused);
+        PositionGroup positionGroup = ChooseChanceMixed(sexEncounter, casterStatus, targetStatus);
+        bool isThreesome = sexEncounter.IsThreesome;
+
+        int personalityId = sexEncounter.CasterSex.IsPlayer
+            ? CharacterDataa.Instance.adultSettingsDATA.SexGameplayAI
+            : sexEncounter.CasterAttributes.enemyData?.statsDATA.EnemyPersonality ?? 0;
+        PersonalitySexTags sexType = PersonalitySexTypes.FirstOrDefault( t => t.Id == personalityId )?.UpdateByStatus(casterStatus);
+                
+        Plugin.Log.Info($"- Caster Gender: {casterGender}; Caster Role: {casterRole}; Caster Status: {casterStatus}");
+        Plugin.Log.Info($"- Target: Gender: {targetGender}; Caster Role: {targetRole}; Caster Status: {targetStatus}; Target charmed: {(allowCommand ? "Yes" : "No")}");
+        if (sexEncounter.IsThreesome)
+            Plugin.Log.Info($"- Assist: Gender: {assistGender}; Caster Role: {assistRole}");
 
         foreach (var sexMove in SexMoves) {
             if (sexMove.IsDisabled)
                 continue;
 
-            if (isThreesome != sexMove.IsThreesome)
+            if (!positionGroup.HasFlag( sexMove.PositionGroup ))
                 continue;
 
-            if (sexMove.IsCommand && !targetIsCharmed)
+            if (LastMove is not null && sexMove.ID == LastMove.ID)
                 continue;
 
-            if (SexSystem.PlayerAttacker && UsePlayerPreferredPositions.Value && !Character.statusDATA.PreferredSex.Contains(sexMove.ID))
+            if (sexMove.IsThreesome != isThreesome)
                 continue;
 
-            if (!sexMove.IsUniversal && sexMove.CasterRole is not CharacterRole.Any) {
-                if (SexSystem.CasterActive && sexMove.CasterRole is not CharacterRole.Active)
-                    continue;
-                else if (!SexSystem.CasterActive && sexMove.CasterRole is not CharacterRole.Passive)
-                    continue;
-                else
+            if (sexMove.IsCommand && !sexMove.IsPerform){
+                if (!allowCommand)
                     continue;
             }
 
-            if (sexMove.CasterGender is not CharacterGender.Any && sexMove.CasterGender != caster)
+            if (!CheckMainRolesAndGenders(sexMove, casterGender, casterRole, targetGender, targetRole))
                 continue;
 
-            if (sexMove.TargetGender is not CharacterGender.Any && sexMove.TargetGender != target)
+            if (sexMove.IsThreesome && (!sexMove.AssistGender.HasFlag(assistGender) || !sexMove.AssistRole.HasFlag(assistRole)))
                 continue;
 
-            sexMoves.Add(sexMove);
+            int score = 0;
+            if (sexEncounter.CasterSex.IsPlayer && UsePlayerPreferredPositions.Value) {
+                if (!Character.statusDATA.PreferredSex.Contains(sexMove.ID))
+                    continue;
+
+                score = 1;
+            } else {
+                score = GetPositionScore(sexMove.SexTags, sexType);
+            }
+
+            sexMoves.Add((sexMove, score));
         }
+        Plugin.Log.Info($"Selected Sex moves: {sexMoves.Count} / {SexMoves.Count}");
 
         return sexMoves;
     }
-}
 
-internal enum SexPositionType {
-    All,
-    Foreplay,
-    Other,
-    Sex
+    static PositionGroup ChooseChanceMixed(SexEncounter sexEncounter, CharacterStatus casterStatus, CharacterStatus targetStatus) {
+        try {
+            int casterCurrentPleasure = sexEncounter.CasterAttributes.currentPleasure;
+            int casterCumsInSuccession = sexEncounter.CasterAttributes.cumsInSuccession;
+            int targetCumsInSuccession = sexEncounter.TargetAttributes.cumsInSuccession;
+            int targetCurrentPleasure = sexEncounter.TargetAttributes.currentPleasure;
+            int delta = casterCumsInSuccession - targetCumsInSuccession;
+            int baseChance = Math.Abs(delta) * 10;
+            int casterBonus = casterCumsInSuccession * 3;
+            int casterStatusBonus = casterStatus.HasFlag(CharacterStatus.Collared) || casterStatus.HasFlag(CharacterStatus.Aroused) || casterStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
+            int targetBonus = targetCumsInSuccession * 5;
+            int targetStatusBonus = targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
+            int plesureState = Math.Min(casterCurrentPleasure, targetCurrentPleasure) / 2500;
+            int plesureBonus = Convert.ToInt32(Math.Pow(5, plesureState));
+
+            int chance = Math.Clamp(baseChance + plesureBonus + targetBonus + targetStatusBonus + casterStatusBonus - casterBonus, 5, 95 );
+
+            PositionGroup group = RandomUtils.Chance(chance) ? PositionGroup.Sex : PositionGroup.Foreplay;
+            Plugin.Log.Info($"Select Sex moves: Chance: {chance} => Type: {group}");
+            return group;
+        } catch (Exception ex) {
+            Plugin.Log.Error(ex);
+            return PositionGroup.Any;
+        }
+    }
+
+    static CharacterGender GetCharacterGender( CharacterSex characterSex ) {
+        CharacterGender gender;
+        if (characterSex.IsMale)
+            gender = CharacterGender.Male;
+        else if (characterSex.IsFuta)
+            gender = CharacterGender.Futa;
+        else
+            gender = CharacterGender.Female;
+
+        return gender;
+    }
+
+    static CharacterStatus GetCharacterStatus(CharacterAttributes characterAttributes) {
+        CharacterStatus status = CharacterStatus.None;
+
+        if (characterAttributes.activeBuffs.Count > 0) {
+            foreach (var buffUI in characterAttributes.activeBuffs) {
+                if (buffUI.buff.buffName.Contains("Aroused"))
+                    status |= CharacterStatus.Aroused;
+
+                if (buffUI.buff.buffName.Contains("Collar"))
+                    status |= CharacterStatus.Collared;
+
+                if (buffUI.buff.buffName.Contains("Charmed"))
+                    status |= CharacterStatus.Charmed;
+            }
+        }
+
+        return status;
+    }
+
+    static bool CheckMainRolesAndGenders(SexMoveExtended sexMove, CharacterGender casterGender, CharacterRole casterRole, CharacterGender targetGender, CharacterRole targetRole) {
+        // Обычная проверка
+        if (sexMove.CasterGender.HasFlag(casterGender) && sexMove.CasterRole.HasFlag(casterRole)
+            && sexMove.TargetGender.HasFlag(targetGender) && sexMove.TargetRole.HasFlag(targetRole)) {
+            return true;
+        }
+
+        // Реверс только если поза универсальная
+        if (sexMove.IsCommand && sexMove.IsPerform) {
+            if (sexMove.CasterGender.HasFlag(targetGender) && sexMove.CasterRole.HasFlag(targetRole)
+                && sexMove.TargetGender.HasFlag(casterGender) && sexMove.TargetRole.HasFlag(casterRole)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static int GetPositionScore(SexTag positionTags, PersonalitySexTags personality) {
+        if (personality == null)
+            return 1;
+
+        int preferredScore = 5;
+        int neutralScore = 2;
+        int avoidScore = 3;
+        bool hasFlags = false;
+        int score = 0;
+
+        foreach (SexTag tag in Enum.GetValues(typeof(SexTag))) {
+            if (tag == SexTag.None)
+                continue;
+
+            if (!positionTags.HasFlag(tag))
+                continue;
+
+            if (positionTags.HasFlag(tag)) {
+                if (personality.PreferredTags.HasFlag(tag)) {
+                    hasFlags = true;
+                    score += preferredScore;
+                } else if (personality.NeutralTags.HasFlag(tag)) {
+                    hasFlags = true;
+                    score += neutralScore;
+                } else if (personality.AvoidTags.HasFlag(tag)) {
+                    hasFlags = true;
+                    score -= avoidScore;
+                }
+            }
+        }
+
+        if (!hasFlags) 
+            score = neutralScore;
+
+        return score;
+    }
+
+    static SexMoveExtended ChooseWeightedRandom(List<(SexMoveExtended move, int score)> moves) {
+        int totalWeight = moves.Sum(m => m.score);
+        if (totalWeight == 0)
+            return null;
+
+        int roll = UnityEngine.Random.Range(0, totalWeight);
+        int current = 0;
+
+        foreach (var (move, score) in moves) {
+            current += score;
+            if (roll < current)
+                return move;
+        }
+
+        return null;
+    }
 }

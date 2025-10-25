@@ -6,7 +6,7 @@ using HarmonyLib;
 
 using YC.GameplayMod.Mods;
 
-namespace YC.GameplayMod.Plugins;
+namespace YC.GameplayMod.Patches;
 internal class BattleManagerPatch {
     internal static bool Prepare() {
         try {
@@ -23,8 +23,8 @@ internal class BattleManagerPatch {
     [HarmonyPostfix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.ChangeSexPosition))]
-    static void BattleManagerChangeSexPositionPrefix(bool __0, int __1) {
-        Plugin.Log.Info($"Change position: Player attacker: {(__0 ? "YES" : "no" )}, Sex Type: {__1}");
+    static void BattleManagerChangeSexPositionPrefix(CharacterAttributes __0, int __1) {
+        Plugin.Log.Info($"Change position: Player attacker: {(__0.isPlayer ? "YES" : "no" )}, Sex Type: {__1}");
 }
 
     [HarmonyPostfix]

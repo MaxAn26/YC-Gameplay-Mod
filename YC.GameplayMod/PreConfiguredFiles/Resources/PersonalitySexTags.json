@@ -1,0 +1,44 @@
+[
+  {
+    "Id": 1,
+    "Name": "Balanced",
+    "PreferredTags": "Sensual, Service, Universal",
+    "NeutralTags": "Dominant, Spanking",
+    "AvoidTags": "Smothering, Wresting"
+  },
+  {
+    "Id": 2,
+    "Name": "Dominant",
+    "PreferredTags": "Dominant, Smothering, Spanking, Wresting",
+    "NeutralTags": "Sensual, Universal",
+    "AvoidTags": "Service"
+  },
+  {
+    "Id": 3,
+    "Name": "Defensive",
+    "PreferredTags": "Sensual, Service, Universal",
+    "NeutralTags": "Smothering",
+    "AvoidTags": "Dominant, Spanking, Wresting"
+  },
+  {
+    "Id": 4,
+    "Name": "Passionate",
+    "PreferredTags": "Dominant, Sensual, Smothering, Spanking",
+    "NeutralTags": "Universal",
+    "AvoidTags": "Service, Wresting"
+  },
+  {
+    "Id": 5,
+    "Name": "Submissive",
+    "PreferredTags": "Sensual, Service, Universal",
+    "NeutralTags": "Smothering",
+    "AvoidTags": "Dominant, Spanking, Wresting"
+  },
+  {
+    "Id": 6,
+    "Name": "Trickster",
+    "PreferredTags": "Smothering, Spanking, Wresting",
+    "NeutralTags": "Dominant, Sensual, Service",
+    "AvoidTags": "Universal"
+  }
+]

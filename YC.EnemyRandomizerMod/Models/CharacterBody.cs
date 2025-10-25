@@ -9,6 +9,7 @@ internal class CharacterBody {
     public float Thighs { get; set; }
     public float Calves { get; set; }
     public float Boobs { get; set; }
+    public int AreolaIndex { get; set; }
     public float Booty { get; set; }
     public float Dick { get; set; }
 }

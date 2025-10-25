@@ -52,10 +52,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="PreConfiguredFiles\Resources\" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <Reference Include="Assembly-CSharp">
 	    <HintPath>..\Libs\Assembly-CSharp.dll</HintPath>
 	  </Reference>
