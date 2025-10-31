@@ -54,7 +54,9 @@ internal class RandomReverseMod {
                 return;
 
             if ( AlwaysAtSameRoles.Value && sexEncounter.CasterActive == sexEncounter.TargetActive 
-                    || (AlwaysInCommandPose.Value && sexEncounter.CurrentMove.isCommand)
+                    || (AlwaysInCommandPose.Value && 
+                        (sexEncounter.CurrentMove?.isCommand == true 
+                        || (SexChoiceRealismMod.LastMove?.ID == sexEncounter.SexID && SexChoiceRealismMod.LastMove?.IsCommand == true )))
                     || (AlwaysWhenTargetCharmed.Value && sexEncounter.TargetSex.IsCharmed)
                     || RandomUtils.Chance(Chance.Value)) {
                 sexEncounter.ReverseMode = !sexEncounter.ReverseMode;
