@@ -7,10 +7,10 @@ using UnityEngine;
 
 namespace BaseMod.Core.Extensions;
 public static class UnityExtensions {
-    public static T? GetComponentWithCast<T>(this GameObject gameObject)
+    public static T GetComponentWithCast<T>(this GameObject gameObject)
         where T : Il2CppObjectBase {
 
-        T? result = gameObject?.GetComponent( Il2CppType.From( typeof( T ) ) )?.TryCast<T>();
+        T result = gameObject?.GetComponent( Il2CppType.From( typeof( T ) ) )?.TryCast<T>();
         if (result is not null)
             return result;
 
@@ -21,7 +21,7 @@ public static class UnityExtensions {
         return gameObject?.GetComponentInParent(Il2CppType.From(typeof(T)))?.TryCast<T>();
     }
 
-    public static bool TryGetComponentWithCast<T>(this GameObject gameObject, [NotNullWhen(true)] out T? result)
+    public static bool TryGetComponentWithCast<T>(this GameObject gameObject, [NotNullWhen(true)] out T result)
         where T : Il2CppObjectBase {
         result = gameObject.GetComponentWithCast<T>();
 
@@ -30,7 +30,7 @@ public static class UnityExtensions {
 
     public static void AddComponentWithAction<T>(this GameObject gameObject, Action<T> action)
         where T : Il2CppObjectBase {
-        if (!gameObject.TryGetComponentWithCast(out T? component)) {
+        if (!gameObject.TryGetComponentWithCast(out T component)) {
             component = gameObject.AddComponent(Il2CppType.From(typeof(T))).TryCast<T>();
         }
 

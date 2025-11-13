@@ -2,75 +2,81 @@
 using System.Collections.Generic;
 
 using BaseMod.Core.Extensions;
+using BaseMod.Core.Logger;
 using BaseMod.Core.Utils;
 
-using BepInEx.Configuration;
+using Il2Cpp;
 
 using UnityEngine;
 
+using YC.EnemyRandomizerMod.Configs;
 using YC.EnemyRandomizerMod.Models;
 
 namespace YC.EnemyRandomizerMod.Mods;
-internal class EnemyBodyRandomizerMod {
+public class EnemyBodyRandomizerMod {
     #region Configuration
-    internal static ConfigEntry<bool> Enabled;
-    internal static ConfigEntry<bool> RandomizeCompanions;
-    internal static ConfigEntry<int> BodyHarmony;
-    internal static ConfigEntry<int> ChanceForFuta;
-    internal static ConfigEntry<int> ChanceForFullFuta;
+    internal static bool Enabled;
+    internal static bool RandomizeCompanions;
+    internal static int ChanceForFuta;
+    internal static int ChanceForFullFuta;
     #endregion
 
     #region States
-    internal static bool IsModActive => Enabled.Value;
+    internal static bool IsModActive => Enabled;
     #endregion
 
     #region Storage
-    internal static CharacterDataa Character => CharacterDataa.Instance;
+    public static CharacterDataa Character => CharacterDataa.Instance;
     #endregion
 
-    internal static void Load(ConfigFile config) {
+    public static void Load(ModConfig config) {
         try {
-            Enabled = config.Bind(nameof(EnemyBodyRandomizerMod), nameof(Enabled), false,
-                new ConfigDescription("Activates the modification", new AcceptableValueList<bool>([true, false])));
-            RandomizeCompanions = config.Bind(nameof(EnemyBodyRandomizerMod), nameof(RandomizeCompanions), false,
-                new ConfigDescription("Randomize companions", new AcceptableValueList<bool>([true, false])));
-            BodyHarmony = config.Bind(nameof(EnemyBodyRandomizerMod), nameof(BodyHarmony), 75,
-                new ConfigDescription("Body size harmony value", new AcceptableValueRange<int>(0, 100)));
-            ChanceForFuta = config.Bind(nameof(EnemyBodyRandomizerMod), nameof(ChanceForFuta), 35,
-                new ConfigDescription("Chance for female character with active or mixed role become futanari", new AcceptableValueRange<int>(0, 100)));
-            ChanceForFullFuta = config.Bind(nameof(EnemyBodyRandomizerMod), nameof(ChanceForFullFuta), 50,
-                new ConfigDescription("Chance for female futa character get full futa (dick + balls)", new AcceptableValueRange<int>(0, 100)));
+            Enabled = config.EnemyBodyRandomizer.Enabled;
+            RandomizeCompanions = config.EnemyBodyRandomizer.RandomizeCompanions;
+            ChanceForFuta = config.EnemyBodyRandomizer.ChanceForFuta;
+            ChanceForFullFuta = config.EnemyBodyRandomizer.ChanceForFullFuta;
 
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
         }
     }
 
-    internal static void Apply(CombatEnemyManager combatEnemyManager, CharacterSex characterSex, Wardrobe wardrobe) {
+    public static void Apply(CombatEnemyManager combatEnemyManager, CharacterSex characterSex, Wardrobe wardrobe) {
         try {
-            if (!Enabled.Value)
+            if (!Enabled)
                 return;
 
-            if (Character.adultSettingsDATA.EREnabled)
+            if (Character.adultSettingsDATA.EREnabled || wardrobe.enemyData is null)
                 return;
 
-            if (combatEnemyManager.requiredAllies.Contains(characterSex.characterName) && !RandomizeCompanions.Value) {
+            if (combatEnemyManager.requiredAllies.Contains(characterSex.characterName) && !RandomizeCompanions) {
                 SetEnemyDickType(wardrobe, characterSex);
                 return;
             }
+
+            Material skin   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[0]);
+            Material face   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[1]);
+            Material eyes   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[2]);
+            Material beard  = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[3]);
+            var materials = wardrobe.SkinCharacter.materials;
+            materials[0] = skin;
+            materials[1] = face;
+            materials[2] = eyes;
+            materials[3] = beard;
+            wardrobe.SkinCharacter.materials = materials;
 
             SetHair(wardrobe);
             SetFaceSize(wardrobe, characterSex);
             SetEnemyDickType(wardrobe, characterSex);
             SetBodySize(wardrobe, characterSex);
-            SetColors(wardrobe, characterSex);
+            SetColors(wardrobe);
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
             return;
         }
     }
 
-    internal static void SetHair(Wardrobe wardrobe) {
+    public static void SetHair(Wardrobe wardrobe) {
         if (wardrobe.HairMeshes.Count <= 0)
             return;
 
@@ -82,7 +88,7 @@ internal class EnemyBodyRandomizerMod {
 
         var hairMesh = wardrobe.characterSex.IsMale
             ? RandomUtils.Int32( 0, 16 )
-            : RandomUtils.Int32( 17, wardrobe.HairMeshes.Count );
+            : RandomUtils.Int32( 17, wardrobe.HairMeshes.Count - 1 );
 
 
         if (wardrobe.HairMeshFilter.mesh != wardrobe.HatHair) {
@@ -92,7 +98,7 @@ internal class EnemyBodyRandomizerMod {
         wardrobe.HairMeshRenderer.sharedMaterial.SetFloat("_AnisotropyValue", RandomUtils.Float(0.5f, 0.95f));
     }
 
-    internal static void SetFaceSize(Wardrobe enemyWardrobe, CharacterSex characterSex) {
+    public static void SetFaceSize(Wardrobe enemyWardrobe, CharacterSex characterSex) {
         #region Face Size
         int face = RandomUtils.Int32(0, 20);
         Plugin.Log.Info( $"Face: {face}");
@@ -772,20 +778,64 @@ internal class EnemyBodyRandomizerMod {
         }
         #endregion
 
+        #region Ears Style
+        int earsStyle = enemyWardrobe.enemyData.statsDATA.EnemyEthnicity > 5 ? RandomUtils.Int32(1, 10) : 0;
+        Plugin.Log.Info($"Ears Style: {earsStyle}");
+        switch (earsStyle) {
+            case 1:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 20.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                break;
+            case 2:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 40.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                break;
+            case 3:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 60.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                break;
+            case 4:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 80.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                break;
+            case 5:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 100.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                break;
+            case 6:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 20.0f);
+                break;
+            case 7:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 40.0f);
+                break;
+            case 8:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 60.0f);
+                break;
+            case 9:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 80.0f);
+                break;
+            case 10:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 100.0f);
+                break;
+            default:
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
+                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                break;
+        }
+        #endregion
+
         if (characterSex.IsMale)
             enemyWardrobe.SkinCharacter.SetBlendShapeWeight(1, 100f);
 
         enemyWardrobe.SkinCharacter.materials[1].SetColor("_Mask1_Gchannel_ColorAmountA", new Color { r = 0.596f, g = 0f, b = 0.129f, a = GetSkewedValue(0.5f) });
     }
 
-    internal static void SetBodySize(Wardrobe enemyWardrobe, CharacterSex characterSex) {
-        /*float bodyScale = Math.Clamp(RandomUtils.NormalFloat(0.55f, 0.12f), 0.0f, 1.0f);
-        float muscle = Math.Clamp(RandomUtils.NormalFloat(0.6f, 0.25f), 0.0f, 1.0f);
-        float bodyHarmony = BodyHarmony.Value / 100.0f;
-
-        bodyScale = Lerp(bodyScale, bodyScale + RandomUtils.Float(-0.15f, 0.15f), 1.0f - bodyHarmony);
-        muscle = Lerp(muscle, Math.Clamp(RandomUtils.NormalFloat(1.5f, 0.5f), 0.0f, 2.5f), 1.0f - bodyHarmony);*/
-
+    public static void SetBodySize(Wardrobe enemyWardrobe, CharacterSex characterSex) {
         var profile = RandomUtils.Item( GetBodyProfiles());
         float minBoobsKoeff = -0.25f;
         float maxBoobsKoeff = 0.25f;
@@ -826,6 +876,7 @@ internal class EnemyBodyRandomizerMod {
         enemyWardrobe.SkinCharacter.materials[0].SetFloat("_FinalNormalMapPower", body.Muscle);
         float smoothness = RandomUtils.Float(0.0f, 0.9f);
         enemyWardrobe.SkinCharacter.material.SetFloat("_SmoothnessDeviate", smoothness);
+        enemyWardrobe.SkinCharacter.materials[1].SetFloat("_SmoothnessDeviate", smoothness);
         enemyWardrobe.SkinDick.material.SetFloat("_SmoothnessDeviate", smoothness);
 
         if (!characterSex.IsMale) {
@@ -913,52 +964,120 @@ internal class EnemyBodyRandomizerMod {
         enemyWardrobe.Dick.transform.localScale = dick;
     }
 
-    internal static void SetColors(Wardrobe wardrobe, CharacterSex characterSex) {
-        var enemyRace = RandomUtils.Item( GetEnemyRaces() );
+    public static void SetColors(Wardrobe wardrobe) {
+        var wardrobe2 = GameObject.Find("WardrobeOBJ")?.GetComponentWithCast<Wardrobe2>();
+        if (wardrobe2 is null)
+            return;
 
-        string skin = enemyRace.SkinColors.RandomItem();
-        string hair = RandomUtils.Chance(15) ? enemyRace.HairFantasyColors.RandomItem() : enemyRace.HairColors.RandomItem();
-        string eyes = RandomUtils.Chance(15) ? enemyRace.EyesFantasyColors.RandomItem() : enemyRace.EyesColors.RandomItem();
+        int skinId = wardrobe.enemyData.statsDATA.EnemyEthnicity switch {
+            0 => RandomUtils.Int32(13),
+            1 or 4 or 6 => RandomUtils.Int32(0, 4),
+            2 or 7 => RandomUtils.Int32(3, 8),
+            5 => RandomUtils.Int32(13, wardrobe2.SkinTones.Count - 1),
+            8 => RandomUtils.Int32(17, wardrobe2.SkinTones.Count - 1),
+            9 => RandomUtils.Int32(13, 16),
+            _ => RandomUtils.Int32(0, wardrobe2.SkinTones.Count - 1)
+        };
 
-        Plugin.Log.Info( $"Character '{characterSex.characterName}' will have Race '{enemyRace.Name}'. Skin: '{skin}', Hair: '{hair}', Eyes: '{eyes}'" );
+        int makeUpId, lipsId;
 
-        if (ColorUtility.TryParseHtmlString(skin, out Color skinColor)) {
-            Plugin.Log.Info($"Set skin color for {characterSex.characterName}");
-            wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Albedo_Tint", skinColor);
-            wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Albedo_Tint", skinColor);
-            if (wardrobe.enemyData.isMale) {
-                wardrobe.SkinCharacter.SetBlendShapeWeight(0, 100);
-                Material newdix = UnityEngine.Object.Instantiate(wardrobe.SkinDick.sharedMaterial);
-                wardrobe.SkinDick.sharedMaterial = newdix;
-                wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", skinColor);
-            } else {
-                Color.RGBToHSV(skinColor, out float skinH, out float skinS, out float skinV);
+        switch (wardrobe.enemyData.statsDATA.EnemyMakeup) {
+            case 0 or 5 or 6:
+                makeUpId    = RandomUtils.Int32(wardrobe2.MakeupColors.Count - 1);
+                lipsId      = RandomUtils.Int32(wardrobe2.MakeupColors.Count - 1);
+                break;
+            case 2 or 3 or 4:
+                makeUpId    = RandomUtils.Int32(7);
+                lipsId      = RandomUtils.Int32(7);
+                break;
+            default:
+                makeUpId    = 0;
+                lipsId      = 0;
+                break;
+        }
 
-                float areolaH = skinH - RandomUtils.Float(0.1f, 0.5f);
-                float areolaS = skinS + RandomUtils.Float(0.1f, 0.5f);
-                float areolaV = skinV - RandomUtils.Float(0.1f, 0.5f);
+        int makeUpIntense = wardrobe.enemyData.statsDATA.EnemyMakeup switch {
+            0 => RandomUtils.Int32(1, 3),
+            2 or 3 or 4 => wardrobe.enemyData.statsDATA.EnemyMakeup - 1,
+            _ => 0
+        };
 
-                Color areolaColor = Color.HSVToRGB(areolaH, areolaS, areolaV);
-                areolaColor.a = RandomUtils.Int32(60, 100) / 100f;
+        int eyesId = RandomUtils.Chance(15)
+            ? RandomUtils.Int32(21, wardrobe2.EyeColors.Count - 1)
+            : RandomUtils.Int32(20);
 
-                wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Bchannel_ColorAmountA", areolaColor);
+        int hairId = RandomUtils.Chance(15)
+            ? RandomUtils.Int32(29, wardrobe2.HairColors.Count - 1)
+            : RandomUtils.Int32(28);
+
+        Color skinColor = wardrobe2.SkinTones[skinId];
+        Color eyesColor = wardrobe2.EyeColors[eyesId];
+        Color hairColor = wardrobe2.HairColors[hairId];
+        
+        wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Albedo_Tint", wardrobe2.SkinTones[skinId]);
+        wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Albedo_Tint", wardrobe2.SkinTones[skinId]);
+        wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask1_Rchannel_ColorAmountA", Color.black);
+
+        wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisBaseColor", eyesColor);
+        wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisExtraColorAmount", eyesColor);
+
+        wardrobe.HairMeshRenderer.sharedMaterial.SetColor("_BaseTint", hairColor);
+        wardrobe.SkinCharacter.sharedMaterials[3].SetColor("_BaseColor", hairColor);
+
+        if (!wardrobe.enemyData.isMale) {
+            Color makeUpColor = wardrobe2.MakeupColors[makeUpId];
+            Color lipsColor = wardrobe2.LipColors[lipsId];
+
+            switch (makeUpIntense) {
+                case 1:
+                    makeUpColor.a = 0.5f;
+                    lipsColor.a = 0.5f;
+                    break;
+                case 2:
+                    makeUpColor.a = 0.7f;
+                    lipsColor.a = 0.7f;
+                    break;
+                case 3:
+                    makeUpColor.a = 0.9f;
+                    lipsColor.a = 1.0f;
+                    break;
+                default:
+                    makeUpColor.a = 0f;
+                    lipsColor.a = 0f;
+                    break;
             }
+
+            wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask2_Rchannel_ColorAmountA", makeUpColor);
+            wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Rchannel_ColorAmountA", makeUpColor);
+            wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask2_Bchannel_ColorAmountA", lipsColor);
+            wardrobe.SkinCharacter.sharedMaterials[1].SetFloat("_GlossAdjust_Mask2Bchannel", 0.9f);
+
+            Color.RGBToHSV(skinColor, out float skinH, out float skinS, out float skinV);
+
+            float areolaH = skinH - RandomUtils.Float(0.1f, 0.5f);
+            float areolaS = skinS + RandomUtils.Float(0.1f, 0.5f);
+            float areolaV = skinV - RandomUtils.Float(0.1f, 0.5f);
+
+            Color areolaColor = Color.HSVToRGB(areolaH, areolaS, areolaV);
+            areolaColor.a = RandomUtils.Int32(60, 100) / 100f;
+            wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Bchannel_ColorAmountA", areolaColor);
         }
 
-        if (ColorUtility.TryParseHtmlString(hair, out Color hairColor)) {
-            Plugin.Log.Info($"Set hair color for {characterSex.characterName}");
-            wardrobe.HairMeshRenderer.sharedMaterial.SetColor("_BaseTint", hairColor);
-            wardrobe.SkinCharacter.sharedMaterials[3].SetColor("_BaseColor", hairColor);
+        if (wardrobe.enemyData.isMale || (wardrobe2 is not null && wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh)) {
+            wardrobe.SkinCharacter.SetBlendShapeWeight(0, 100);
+            Material newdix = UnityEngine.Object.Instantiate(wardrobe.SkinDick.sharedMaterial);
+            wardrobe.SkinDick.sharedMaterial = newdix;
+            wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", skinColor);
         }
 
-        if (ColorUtility.TryParseHtmlString(eyes, out Color eyesColor)) {
-            Plugin.Log.Info($"Set eyes color for {characterSex.characterName}");
-            wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisBaseColor", eyesColor);
-            wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisExtraColorAmount", eyesColor);
+        if (wardrobe.enemyData.customizationDATA.WearingHat) {
+            Plugin.Log.Info("Hat");
+            wardrobe.SetHairEnCreator(true);
+            return;
         }
     }
 
-    internal static void SetEnemyDickType(Wardrobe wardrobe, CharacterSex characterSex) {
+    public static void SetEnemyDickType(Wardrobe wardrobe, CharacterSex characterSex) {
         if (characterSex.IsMale)
             return;
 
@@ -966,10 +1085,10 @@ internal class EnemyBodyRandomizerMod {
         if (wardrobe2 is null)
             return;
 
-        if (RandomUtils.Chance(ChanceForFuta.Value)) {
+        if (RandomUtils.Chance(ChanceForFuta )) {
             Plugin.Log.Info($"{characterSex.characterName} will use a dick");
 
-            wardrobe.SkinDick.sharedMesh = RandomUtils.Chance(ChanceForFullFuta.Value) ? wardrobe2.DickMesh : wardrobe2.DickHalfMesh;
+            wardrobe.SkinDick.sharedMesh = RandomUtils.Chance(ChanceForFullFuta ) ? wardrobe2.DickMesh : wardrobe2.DickHalfMesh;
             Material material = characterSex.IsMale ? UnityEngine.Object.Instantiate(wardrobe2.DickMatM) : UnityEngine.Object.Instantiate(wardrobe2.DickMatF);
             wardrobe.SkinDick.sharedMaterial = material;
             var color = wardrobe.SkinCharacter.material.GetColor("_Albedo_Tint");
@@ -985,8 +1104,8 @@ internal class EnemyBodyRandomizerMod {
         }
     }
 
-    internal static void SetFutaState(CharacterSex characterSex, Wardrobe wardrobe) {
-        if (!Enabled.Value)
+    public static void SetFutaState(CharacterSex characterSex, Wardrobe wardrobe) {
+        if (!Enabled)
             return;
 
         if (Character.adultSettingsDATA.EREnabled)
@@ -996,7 +1115,7 @@ internal class EnemyBodyRandomizerMod {
         if (wardrobe2 is null)
             return;
 
-        Plugin.Log.Debug($"SetFutaState: {wardrobe.SkinDick.sharedMesh.name} != {wardrobe2.StrapMesh.name}");
+        Plugin.Log.Debug($"SetFutaState: {(wardrobe.SkinDick.sharedMesh.name != wardrobe2.StrapMesh.name ? "YES" : "No")}");
 
         if (wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh)
             characterSex.IsFuta = true;

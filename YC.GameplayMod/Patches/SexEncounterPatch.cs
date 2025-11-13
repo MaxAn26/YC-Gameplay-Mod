@@ -4,6 +4,8 @@ using BaseMod.Core.Extensions;
 
 using HarmonyLib;
 
+using Il2Cpp;
+
 using Il2CppSystem.Diagnostics;
 
 using UnityEngine;
@@ -19,7 +21,7 @@ internal class SexEncounterPatch {
 
             return true;
         } catch (Exception) {
-            Plugin.Log.LogWarning($"{nameof(SexEncounterPatch)} not applied due exeption");
+            Plugin.Log.Warn($"{nameof(SexEncounterPatch)} not applied due exeption");
             return false;
         }
     }

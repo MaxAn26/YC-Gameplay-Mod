@@ -1,5 +1,7 @@
 ﻿using System;
 
+using Il2Cpp;
+
 namespace YC.Unloader.Models;
 internal class ClothesItem : IComparable<ClothesItem> {
     public int ID { get; set; }

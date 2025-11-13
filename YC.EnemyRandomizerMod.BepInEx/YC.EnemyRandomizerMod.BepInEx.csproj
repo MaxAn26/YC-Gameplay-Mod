@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-	<Import Project="..\build\PluginInfo.targets" />
+
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -9,7 +9,7 @@
 			https://nuget.bepinex.dev/v3/index.json;
 			https://nuget.samboy.dev/v3/index.json
 		</RestoreAdditionalProjectSources>
-		<RootNamespace>YC.Unloader</RootNamespace>
+		<RootNamespace>YC.EnemyRandomizerMod.BepInEx</RootNamespace>
 		<DebugType>embedded</DebugType>
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
@@ -21,8 +21,8 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<AssemblyName>YC.Unloader</AssemblyName>
-		<Description>YC Unloader</Description>
+		<AssemblyName>YC.EnemyRandomizerMod.BepInEx</AssemblyName>
+		<Description>YC.Enemy Randomizer Mod</Description>
 		<Product>$(Description)</Product>
 		<Authors>BoL4oNoK</Authors>
 		<Copyright>Copyright © BoL4oNoK $([System.DateTime]::UtcNow.ToString(yyyy))</Copyright>
@@ -35,54 +35,35 @@
 
 	<ItemDefinitionGroup>
 		<PackageReference>
-			<PrivateAssets>all</PrivateAssets>
+			<PrivateAssets>none</PrivateAssets>
 		</PackageReference>
-		<Reference>
-			<Private>false</Private>
-		</Reference>
 	</ItemDefinitionGroup>
 
 	<ItemGroup>
-		<!-- 
-			<PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
-			<PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
-		-->
-		
-		<PackageReference Include="LavaGang.MelonLoader" Version="0.7.1" />
-		<PackageReference Include="Samboy063.Tomlet" Version="6.1.0" />
+		<PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
+		<PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\BaseMod.Core\BaseMod.Core.csproj" />
+		<ProjectReference Include="..\YC.EnemyRandomizerMod\YC.EnemyRandomizerMod.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Reference Include="0Harmony">
-			<HintPath>..\Libs\0Harmony.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="Il2CppInterop.Runtime">
-			<HintPath>..\Libs\Il2CppInterop.Runtime.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="Assembly-CSharp">
-			<HintPath>..\Libs\Assembly-CSharp.dll</HintPath>
-		</Reference>
-		<Reference Include="Il2Cppmscorlib">
-			<HintPath>..\Libs\Il2Cppmscorlib.dll</HintPath>
-		</Reference>
-		<Reference Include="UnityEngine.CoreModule">
-			<HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath>
-		</Reference>
+		<None Include="..\Libs\Tomlet.dll"
+			Pack="false"
+			CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
-	
+
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<ItemGroup>
 			<CopySource Include="$(TargetDir)*.dll" />
+			<!--<PreConfiguredFiles Include="$(ProjectDir)PreConfiguredFiles\**\*.*" />-->
 		</ItemGroup>
 
-		<MakeDir Directories="$(SolutionDir)@Mods\$(AssemblyName)\Mods" />
-		<Copy SourceFiles="@(CopySource)" DestinationFolder="$(SolutionDir)@Mods\$(AssemblyName)\Mods" />
+		<MakeDir Directories="$(SolutionDir)@Mods\BepInEx\$(AssemblyName)" />
+		<Copy SourceFiles="@(CopySource)" DestinationFolder="$(SolutionDir)@Mods\BepInEx\$(AssemblyName)" />
+		<!--<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(SolutionDir)@Mods\$(AssemblyName)\%(RecursiveDir)" />-->
 	</Target>
 
 	<Target Name="PostPublish" AfterTargets="Publish" Condition="'$(Configuration)'=='Release'">
@@ -91,8 +72,10 @@
 			<!--<PreConfiguredFiles Include="$(ProjectDir)PreConfiguredFiles\**\*.*" />-->
 		</ItemGroup>
 
-		<MakeDir Directories="$(SolutionDir)@Release\$(AssemblyName)\$(AssemblyName)" />
-		<Copy SourceFiles="@(CopySource)" DestinationFolder="$(SolutionDir)@Release\$(AssemblyName)\$(AssemblyName)" />
-		<ZipDirectory SourceDirectory="$(SolutionDir)@Release\$(AssemblyName)" DestinationFile="$(SolutionDir)@Release\$(AssemblyName)-$(AssemblyVersion).zip" Overwrite="true" />
+		<MakeDir Directories="$(SolutionDir)@Release\BepInEx\$(AssemblyName)\$(AssemblyName)" />
+		<Copy SourceFiles="@(CopySource)" DestinationFolder="$(SolutionDir)@Release\BepInEx\$(AssemblyName)\$(AssemblyName)" />
+		<!--<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(SolutionDir)@Release\$(AssemblyName)\$(AssemblyName)\%(RecursiveDir)" />-->
+		<!--<Copy SourceFiles="$(ProjectDir)Gameplay Mod_Readme.rtf" DestinationFolder="$(SolutionDir)@Release\$(AssemblyName)" />-->
+		<ZipDirectory SourceDirectory="$(SolutionDir)@Release\BepInEx\$(AssemblyName)" DestinationFile="$(SolutionDir)@Release\BepInEx\BepInEx-$(AssemblyName)-$(AssemblyVersion).zip" Overwrite="true" />
 	</Target>
 </Project>

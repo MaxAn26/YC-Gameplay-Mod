@@ -5,17 +5,17 @@ using System.Text.Json.Serialization;
 
 namespace BaseMod.Core.Utils;
 public static class JsonUtils {
-    public static bool TryDeserialize<T>( string foldername, string filename, [NotNullWhen( true )] out T? result )
+    public static bool TryDeserialize<T>( string foldername, string filename, [NotNullWhen( true )] out T result )
         => TryDeserialize( $"{foldername}\\{filename}", out result );
 
-    public static bool TryDeserialize<T>( string filepath, [NotNullWhen( true )] out T? result ) {
+    public static bool TryDeserialize<T>( string filepath, [NotNullWhen( true )] out T result ) {
         result = default;
 
         try {
             if(!File.Exists( filepath ))
                 throw new FileNotFoundException( $"File not exist: '{filepath}'", filepath );
 
-            T? json = JsonSerializer.Deserialize<T>( File.ReadAllText(filepath), Options) ?? throw new Exception( $"Can't deserialize file '{filepath}' to type '{typeof( T )}'" );
+            T json = JsonSerializer.Deserialize<T>( File.ReadAllText(filepath), Options) ?? throw new Exception( $"Can't deserialize file '{filepath}' to type '{typeof( T )}'" );
 
             result = json;
             return true;
@@ -32,7 +32,7 @@ public static class JsonUtils {
                 _ = Directory.CreateDirectory(folder);
 
             foreach (var filepath in Directory.EnumerateFiles(folder, searchPattern)) {
-                if (TryDeserialize(filepath, out T? result))
+                if (TryDeserialize(filepath, out T result))
                     resultList.Add(result);
             }
 

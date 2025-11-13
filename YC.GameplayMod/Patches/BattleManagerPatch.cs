@@ -4,6 +4,8 @@ using BaseMod.Core.Extensions;
 
 using HarmonyLib;
 
+using Il2Cpp;
+
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Patches;
@@ -15,7 +17,7 @@ internal class BattleManagerPatch {
 
             return true;
         } catch (Exception) {
-            Plugin.Log.LogWarning($"{nameof(BattleManagerPatch)} not applied due exeption");
+            Plugin.Log.Warn($"{nameof(BattleManagerPatch)} not applied due exeption");
             return false;
         }
     }

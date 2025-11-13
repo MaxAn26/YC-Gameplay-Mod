@@ -6,6 +6,8 @@ using System.Linq;
 using BaseMod.Core.Extensions;
 using BaseMod.Core.Utils;
 
+using Il2Cpp;
+
 using Il2CppInterop.Runtime;
 
 using UnityEngine;

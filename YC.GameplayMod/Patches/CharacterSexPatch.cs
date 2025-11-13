@@ -2,6 +2,9 @@
 
 using HarmonyLib;
 
+using Il2Cpp;
+
+using YC.GameplayMod.Components;
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Patches;
@@ -13,9 +16,16 @@ internal class CharacterSexPatch {
 
             return true;
         } catch (Exception) {
-            Plugin.Log.LogWarning($"{nameof(CharacterSexPatch)} not applied due exeption");
+            Plugin.Log.Warn($"{nameof(CharacterSexPatch)} not applied due exeption");
             return false;
         }
+    }
+
+    [HarmonyPostfix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(CharacterSex), nameof(CharacterSex.Start))]
+    static void CharacterSexStartPostfix(CharacterSex __instance) {
+        GameplayModComponent.RegisterClass(__instance);
     }
 
     [HarmonyPostfix]

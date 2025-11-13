@@ -4,12 +4,14 @@ using BaseMod.Core.Extensions;
 
 using HarmonyLib;
 
+using Il2Cpp;
+
 using UnityEngine;
 
 using YC.EnemyRandomizerMod.Mods;
 
 namespace YC.EnemyRandomizerMod.Patches;
-internal class CombatEnemyManagerPatch {
+public class CombatEnemyManagerPatch {
     internal static bool Prepare() {
         try {
             if (!EnemyBodyRandomizerMod.IsModActive)
@@ -17,7 +19,7 @@ internal class CombatEnemyManagerPatch {
 
             return true;
         } catch (Exception) {
-            Plugin.Log.LogWarning($"{nameof(CombatEnemyManagerPatch)} not applied due exeption");
+            Plugin.Log.Warn($"{nameof(CombatEnemyManagerPatch)} not applied due exeption");
             return false;
         }
     }

@@ -7,25 +7,27 @@ using System.Linq;
 using BaseMod.Core.Extensions;
 using BaseMod.Core.Utils;
 
-using BepInEx.Configuration;
+using Il2Cpp;
 
 using Il2CppInterop.Runtime;
 
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+using YC.GameplayMod.Components;
+using YC.GameplayMod.Configs;
 using YC.GameplayMod.Models;
 
 namespace YC.GameplayMod.Mods;
 internal class SexChoiceRealismMod {
     #region Configuration
-    internal static ConfigEntry<bool> Enabled;
-    internal static ConfigEntry<bool> UpdateMoves;
-    internal static ConfigEntry<bool> UsePlayerPreferredPositions;
+    internal static bool Enabled;
+    internal static bool UpdateMoves;
+    internal static bool UsePlayerPreferredPositions;
     #endregion
 
     #region States
-    internal static bool IsModActive => Enabled.Value;
+    internal static bool IsModActive => Enabled;
     internal static List<SexMoveExtended> SexMoves { get; set; } = [];
     internal static List<PersonalitySexTags> PersonalitySexTypes { get; set; } = [];
     #endregion
@@ -37,14 +39,11 @@ internal class SexChoiceRealismMod {
     internal static SexMoveExtended LastMove;
     #endregion
 
-    internal static void Load(ConfigFile config) {
+    internal static void Load(ModConfig config) {
         try {
-            Enabled = config.Bind(nameof(SexChoiceRealismMod), nameof(Enabled), false,
-                new ConfigDescription("Activates the modification", new AcceptableValueList<bool>([true, false])));
-            UpdateMoves = config.Bind(nameof(SexChoiceRealismMod), nameof(UpdateMoves), false,
-                new ConfigDescription("Update SexMove.json", new AcceptableValueList<bool>([true, false])));
-            UsePlayerPreferredPositions = config.Bind(nameof(SexChoiceRealismMod), nameof(UsePlayerPreferredPositions), false,
-                new ConfigDescription("ONLY use preferred positions", new AcceptableValueList<bool>([true, false])));
+            Enabled = config.SexChoiceRealism.Enabled;
+            UpdateMoves = config.SexChoiceRealism.UpdateMoves;
+            UsePlayerPreferredPositions = config.SexChoiceRealism.UsePlayerPreferredPositions;
 
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
@@ -69,7 +68,7 @@ internal class SexChoiceRealismMod {
                 } else {
                     Plugin.Log.Info($"SexMoves.json was not created");
                 }
-            } else if (UpdateMoves.Value) {
+            } else if (UpdateMoves) {
                 List<SexMoveExtended> poses = GetSexMoves();
                 foreach (var item in poses) {
                     var move = extendedSexMoves.FirstOrDefault(p => p.ID == item.ID);
@@ -110,7 +109,7 @@ internal class SexChoiceRealismMod {
 
     internal static void SetSexID(SexEncounter sexEncounter) {
         try {
-            if (!Enabled.Value || SceneManager.GetActiveScene().buildIndex < 2) {
+            if (!Enabled || SceneManager.GetActiveScene().buildIndex < 2) {
                 Plugin.Log.Info("Exit due execute condition");
                 return;
             }
@@ -153,7 +152,7 @@ internal class SexChoiceRealismMod {
 
     internal static void SetThreesomeSexID(SexEncounter sexEncounter) {
         try {
-            if (!Enabled.Value || SceneManager.GetActiveScene().buildIndex < 2) {
+            if (!Enabled || SceneManager.GetActiveScene().buildIndex < 2) {
                 Plugin.Log.Info("Exit due execute condition");
                 return;
             }
@@ -365,7 +364,7 @@ internal class SexChoiceRealismMod {
                 continue;
 
             int score = 0;
-            if (sexEncounter.CasterSex.IsPlayer && UsePlayerPreferredPositions.Value) {
+            if (sexEncounter.CasterSex.IsPlayer && UsePlayerPreferredPositions) {
                 if (!Character.statusDATA.PreferredSex.Contains(sexMove.ID))
                     continue;
 
@@ -383,23 +382,28 @@ internal class SexChoiceRealismMod {
 
     static PositionGroup ChooseChanceMixed(SexEncounter sexEncounter, CharacterStatus casterStatus, CharacterStatus targetStatus) {
         try {
-            int casterCurrentPleasure = sexEncounter.CasterAttributes.currentPleasure;
-            int casterCumsInSuccession = sexEncounter.CasterAttributes.cumsInSuccession;
-            int targetCumsInSuccession = sexEncounter.TargetAttributes.cumsInSuccession;
-            int targetCurrentPleasure = sexEncounter.TargetAttributes.currentPleasure;
-            int delta = casterCumsInSuccession - targetCumsInSuccession;
-            int baseChance = Math.Abs(delta) * 10;
-            int casterBonus = casterCumsInSuccession * 3;
-            int casterStatusBonus = casterStatus.HasFlag(CharacterStatus.Collared) || casterStatus.HasFlag(CharacterStatus.Aroused) || casterStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
-            int targetBonus = targetCumsInSuccession * 5;
-            int targetStatusBonus = targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
-            int plesureState = Math.Min(casterCurrentPleasure, targetCurrentPleasure) / 2500;
-            int plesureBonus = Convert.ToInt32(Math.Pow(5, plesureState));
+            int sexChance = 40;
+            if ( sexEncounter.CasterSex.gameObject.TryGetComponentWithCast(out GameplayModComponent casterComponent) 
+                && sexEncounter.TargetSex.gameObject.TryGetComponentWithCast(out GameplayModComponent targetComponent)) {
+                int casterCumsInSuccession  = casterComponent.SexInteractions;
+                int casterCurrentPleasure   = casterComponent.Attributes.currentPleasure;
+                int targetCumsInSuccession  = targetComponent.SexInteractions;
+                int targetCurrentPleasure   = targetComponent.Attributes.currentPleasure;
 
-            int chance = Math.Clamp(baseChance + plesureBonus + targetBonus + targetStatusBonus + casterStatusBonus - casterBonus, 5, 95 );
+                int delta                   = casterCumsInSuccession - targetCumsInSuccession;
+                int baseChance              = Math.Abs(delta) * 10;
+                int casterBonus             = casterCumsInSuccession * 3;
+                int casterStatusBonus       = casterStatus.HasFlag(CharacterStatus.Collared) || casterStatus.HasFlag(CharacterStatus.Aroused) || casterStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
+                int targetBonus             = targetCumsInSuccession * 5;
+                int targetStatusBonus       = targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
+                int plesureState            = Math.Min(casterCurrentPleasure, targetCurrentPleasure) / 2500;
+                int plesureBonus            = Convert.ToInt32(Math.Pow(5, plesureState));
 
-            PositionGroup group = RandomUtils.Chance(chance) ? PositionGroup.Sex : PositionGroup.Foreplay;
-            Plugin.Log.Info($"Select Sex moves: Chance: {chance} => Type: {group}");
+                sexChance = Math.Clamp(baseChance + plesureBonus + targetBonus + targetStatusBonus + casterStatusBonus - casterBonus, 5, 95 );
+            }
+
+            PositionGroup group = RandomUtils.Chance(sexChance) ? PositionGroup.Sex : PositionGroup.Foreplay;
+            Plugin.Log.Info($"Select Sex moves: Chance: {sexChance} => Type: {group}");
             return group;
         } catch (Exception ex) {
             Plugin.Log.Error(ex);

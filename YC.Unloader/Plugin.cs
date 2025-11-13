@@ -1,39 +1,39 @@
 ﻿using System.IO;
-using System.Reflection;
 
-using BepInEx;
-using BepInEx.Logging;
-using BepInEx.Unity.IL2CPP;
+using BaseMod.Core.Logger;
 
-using HarmonyLib;
+using MelonLoader;
+using MelonLoader.Utils;
 
-using UnityEngine.Events;
-using UnityEngine.SceneManagement;
-
+using YC.Unloader;
 using YC.Unloader.Services;
 
+[assembly: MelonInfo(typeof(Plugin), MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION, MyPluginInfo.PLUGIN_AUTHORS)]
+[assembly: MelonGame(null, null)]
+
 namespace YC.Unloader;
-[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
-public class Plugin : BasePlugin {
-    internal static new ManualLogSource Log;
+public class Plugin : MelonMod {
+    internal static IPluginLogger Log;
     internal static string PluginResources;
-    internal static Harmony Harmony = new(MyPluginInfo.PLUGIN_GUID);
 
-    public override void Load() {
+    public override void OnInitializeMelon() {
+        base.OnInitializeMelon();
+
         // Plugin startup logic
-        Log = base.Log;
-        PluginResources = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Resources");
+        Log = new MelonPluginLogger(new MelonLogger.Instance(MyPluginInfo.PLUGIN_GUID));
+        
+        PluginResources = Path.Combine(MelonEnvironment.UserDataDirectory, MyPluginInfo.PLUGIN_GUID, "Resources");
 
-        SceneManager.sceneLoaded += (UnityAction<Scene, LoadSceneMode>)OnSceneLoaded;
-
-        Log.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+        Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
 
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
-        if (scene.buildIndex == 2) {
+    public override void OnSceneWasLoaded(int buildIndex, string sceneName) {
+        if (buildIndex == 2) {
             UnloadService.UnloadClothes();
             UnloadService.UnloadCombatBuffs();
             UnloadService.UnloadCombatTalents();
         }
+
+        base.OnSceneWasLoaded(buildIndex, sceneName);
     }
 }

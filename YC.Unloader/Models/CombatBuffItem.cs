@@ -1,4 +1,6 @@
-﻿namespace YC.Unloader.Models;
+﻿using Il2Cpp;
+
+namespace YC.Unloader.Models;
 internal class CombatBuffItem {
     public string Name { get; set; }
     public string Description { get; set; }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.Json.Serialization;
 
-using YC.GameplayMod.Mods;
+using Il2Cpp;
 
 namespace YC.GameplayMod.Models;
 internal class SexMoveExtended : IComparable<SexMoveExtended> {

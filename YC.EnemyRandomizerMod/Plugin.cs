@@ -1,26 +1,35 @@
-﻿using BepInEx;
-using BepInEx.Logging;
-using BepInEx.Unity.IL2CPP;
+﻿using System.IO;
 
-using HarmonyLib;
+using BaseMod.Core.Logger;
 
+using MelonLoader;
+using MelonLoader.Utils;
+
+using YC.EnemyRandomizerMod;
+using YC.EnemyRandomizerMod.Configs;
 using YC.EnemyRandomizerMod.Mods;
+
 using YC.EnemyRandomizerMod.Patches;
 
+[assembly: MelonInfo(typeof(Plugin), MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION, MyPluginInfo.PLUGIN_AUTHORS)]
+[assembly: MelonGame(null, null)]
+
 namespace YC.EnemyRandomizerMod;
-[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
-public class Plugin : BasePlugin {
-    internal static new ManualLogSource Log;
-    internal static Harmony Harmony = new(MyPluginInfo.PLUGIN_GUID);
+public class Plugin : MelonMod {
+    internal static IPluginLogger Log;
 
-    public override void Load() {
+    public override void OnInitializeMelon() {
+        base.OnInitializeMelon();
+
         // Plugin startup logic
-        Log = base.Log;
+        Log = new MelonPluginLogger( new MelonLogger.Instance(MyPluginInfo.PLUGIN_GUID));
+        
+        var config = ModConfig.Load(Path.Combine( MelonEnvironment.UserDataDirectory, $"{MyPluginInfo.PLUGIN_GUID}.cfg") );
 
-        EnemyBodyRandomizerMod.Load(Config);
+        EnemyBodyRandomizerMod.Load(config);
 
-        Harmony.PatchAll(typeof(CombatEnemyManagerPatch));
+        HarmonyInstance.PatchAll(typeof(CombatEnemyManagerPatch));
 
-        Log.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+        Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
 }

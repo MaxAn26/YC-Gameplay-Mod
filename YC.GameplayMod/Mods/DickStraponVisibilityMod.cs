@@ -1,25 +1,22 @@
 ﻿using System;
 
-using BaseMod.Core.Extensions;
+using Il2Cpp;
 
-using BepInEx.Configuration;
-
-using static System.Net.Mime.MediaTypeNames;
+using YC.GameplayMod.Configs;
 
 namespace YC.GameplayMod.Mods;
 internal class DickStraponVisibilityMod {
     #region Configuration
-    internal static ConfigEntry<bool> Enabled;
+    internal static bool Enabled;
     #endregion
 
     #region States
-    internal static bool IsModActive => Enabled.Value;
+    internal static bool IsModActive => Enabled;
     #endregion
 
-    internal static void Load(ConfigFile config) {
+    internal static void Load(ModConfig config) {
         try {
-            Enabled = config.Bind(nameof(DickStraponVisibilityMod), nameof(Enabled), false,
-                new ConfigDescription("Activates the modification", new AcceptableValueList<bool>([true, false])));
+            Enabled = config.DickStraponVisibility.Enabled;
 
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
@@ -28,7 +25,7 @@ internal class DickStraponVisibilityMod {
 
     internal static bool SetDicks(SexEncounter sexEncounter) {
         try {
-            if (!Enabled.Value)
+            if (!Enabled)
                 return false;
 
             if (sexEncounter.CasterMale || sexEncounter.CasterFuta || sexEncounter.CasterDickRequired) {
@@ -59,7 +56,7 @@ internal class DickStraponVisibilityMod {
 
     internal static void SetDick( CharacterSex characterSex, bool showDick = false) {
         try {
-            if (!Enabled.Value)
+            if (!Enabled)
                 return;
 
             if (showDick) {

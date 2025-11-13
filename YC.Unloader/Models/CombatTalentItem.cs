@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
+using Il2Cpp;
+
 namespace YC.Unloader.Models;
 internal class CombatTalentItem : IComparable<CombatTalentItem> {
     public int ID { get; set; }
