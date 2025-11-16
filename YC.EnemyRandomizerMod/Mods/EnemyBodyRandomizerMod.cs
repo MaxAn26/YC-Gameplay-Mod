@@ -51,6 +51,7 @@ public class EnemyBodyRandomizerMod {
 
             if (combatEnemyManager.requiredAllies.Contains(characterSex.characterName) && !RandomizeCompanions) {
                 SetEnemyDickType(wardrobe, characterSex);
+                CheckHat(wardrobe);
                 return;
             }
 
@@ -80,11 +81,7 @@ public class EnemyBodyRandomizerMod {
         if (wardrobe.HairMeshes.Count <= 0)
             return;
 
-        if (wardrobe.enemyData.customizationDATA.WearingHat) {
-            Plugin.Log.Info("Hat");
-            wardrobe.SetHairEnCreator(true);
-            return;
-        }
+        CheckHat(wardrobe);
 
         var hairMesh = wardrobe.characterSex.IsMale
             ? RandomUtils.Int32( 0, 16 )
@@ -1070,11 +1067,7 @@ public class EnemyBodyRandomizerMod {
             wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", skinColor);
         }
 
-        if (wardrobe.enemyData.customizationDATA.WearingHat) {
-            Plugin.Log.Info("Hat");
-            wardrobe.SetHairEnCreator(true);
-            return;
-        }
+        CheckHat(wardrobe);
     }
 
     public static void SetEnemyDickType(Wardrobe wardrobe, CharacterSex characterSex) {
@@ -1121,6 +1114,14 @@ public class EnemyBodyRandomizerMod {
             characterSex.IsFuta = true;
         else
             characterSex.IsFuta = false;
+    }
+
+    public static void CheckHat(Wardrobe wardrobe) {
+        if (wardrobe.enemyData.customizationDATA.WearingHat) {
+            Plugin.Log.Info("Hat");
+            wardrobe.SetHairEnCreator(true);
+            return;
+        }
     }
 
     private static float Map(float value, float inMin, float inMax, float outMin, float outMax) {

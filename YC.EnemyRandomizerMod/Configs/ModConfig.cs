@@ -7,22 +7,24 @@ namespace YC.EnemyRandomizerMod.Configs;
 public class ModConfig {
     public EnemyBodyRandomizerConfig EnemyBodyRandomizer { get; set; } = new();
 
-    public static ModConfig Load( string path ) {
+    internal static ModConfig Load() {
         ModConfig config;
+        string path = Path.Combine( Plugin.ConfigPath, $"{MyPluginInfo.PLUGIN_GUID}.cfg");
         if (File.Exists(path)) {
             string tomlText = File.ReadAllText(path);
             config = TomletMain.To<ModConfig>(tomlText);
         } else {
             config = new ModConfig();
-            Save( path, config);
+            config.Save();
         }
 
         return config;
     }
 
-    public static void Save(string path, ModConfig modConfig) {
+    internal void Save() {
+        string path = Path.Combine( Plugin.ConfigPath, $"{MyPluginInfo.PLUGIN_GUID}.cfg");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
-        string tomlText = TomletMain.TomlStringFrom(modConfig);
+        string tomlText = TomletMain.TomlStringFrom(this);
         File.WriteAllText(path, tomlText);
     }
 

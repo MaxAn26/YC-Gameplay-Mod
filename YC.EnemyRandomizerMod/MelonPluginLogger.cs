@@ -9,8 +9,10 @@ public class MelonPluginLogger(MelonLoader.MelonLogger.Instance logger) : IPlugi
     private readonly MelonLoader.MelonLogger.Instance _logger = logger;
 
     public void Debug(string message, [CallerMemberName] string callerName = "", [CallerFilePath] string filePath = "") {
+#if DEBUG
         var className = Path.GetFileNameWithoutExtension(filePath);
         _logger.Msg($"[{className}.{callerName} | DEBUG] {message}");
+#endif
     }
 
     public void Info(string message, [CallerMemberName] string callerName = "", [CallerFilePath] string filePath = "") {

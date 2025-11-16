@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-using BaseMod.Core.Logger;
+﻿using BaseMod.Core.Logger;
 
 using MelonLoader;
 using MelonLoader.Utils;
@@ -17,19 +15,28 @@ using YC.EnemyRandomizerMod.Patches;
 namespace YC.EnemyRandomizerMod;
 public class Plugin : MelonMod {
     internal static IPluginLogger Log;
+    internal static ModConfig Config;
+    internal static string ConfigPath;
 
     public override void OnInitializeMelon() {
         base.OnInitializeMelon();
 
         // Plugin startup logic
-        Log = new MelonPluginLogger( new MelonLogger.Instance(MyPluginInfo.PLUGIN_GUID));
-        
-        var config = ModConfig.Load(Path.Combine( MelonEnvironment.UserDataDirectory, $"{MyPluginInfo.PLUGIN_GUID}.cfg") );
+        Log         = new MelonPluginLogger( new MelonLogger.Instance(MyPluginInfo.PLUGIN_GUID));
+        ConfigPath  = MelonEnvironment.UserDataDirectory;
 
-        EnemyBodyRandomizerMod.Load(config);
+        Config = ModConfig.Load();
+
+        EnemyBodyRandomizerMod.Load(Config);
 
         HarmonyInstance.PatchAll(typeof(CombatEnemyManagerPatch));
 
         Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+    }
+
+    public override void OnDeinitializeMelon() {
+        Config?.Save();
+
+        base.OnDeinitializeMelon();
     }
 }
