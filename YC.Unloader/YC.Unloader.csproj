@@ -77,17 +77,14 @@
 	</ItemGroup>
 	
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<ItemGroup>
-			<CopySource Include="$(TargetDir)*.dll" />
-		</ItemGroup>
-
-		<MakeDir Directories="$(SolutionDir)@Mods\$(AssemblyName)\Mods" />
-		<Copy SourceFiles="@(CopySource)" DestinationFolder="$(SolutionDir)@Mods\$(AssemblyName)\Mods" />
+		<MakeDir Directories="$(SolutionDir)@Mods\Mods" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SolutionDir)@Mods\Mods" />
 	</Target>
 
 	<Target Name="PostPublish" AfterTargets="Publish" Condition="'$(Configuration)'=='Release'">
 		<ItemGroup>
-			<CopySource Include="$(PublishDir)*.dll" />
+			<MakeDir Directories="$(SolutionDir)@Mods\Mods" />
+			<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SolutionDir)@Mods\Mods" />
 			<!--<PreConfiguredFiles Include="$(ProjectDir)PreConfiguredFiles\**\*.*" />-->
 		</ItemGroup>
 
