@@ -6,6 +6,8 @@ using HarmonyLib;
 
 using Il2Cpp;
 
+using Il2CppInterop.Runtime;
+
 using Il2CppSystem.Diagnostics;
 
 using UnityEngine;
@@ -40,9 +42,16 @@ internal class SexEncounterPatch {
 
     [HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetHeavyBondageAnimation))]
-    static bool SexEncounterSetHeavyBondageAnimationPrefix(SexEncounter __instance, bool __runOriginal) {
-        SexChoiceRealismMod.SetSexID(__instance);
+    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.CounterAction))]
+    static bool SexEncounterCounterActionPrefix(SexEncounter __instance, bool __runOriginal, ref bool __0, ref int __1) {
+        int newSexId;
+        if (__0)
+            newSexId = SexChoiceRealismMod.GetSexId(__instance.TargetSex, __instance.CasterSex, __instance.IsThreesome ? __instance.AssistSex : null);
+        else
+            newSexId = SexChoiceRealismMod.GetSexId(__instance.CasterSex, __instance.TargetSex, __instance.IsThreesome ? __instance.AssistSex : null);
+
+        if (newSexId > 0)
+            __1 = newSexId;
 
         if (!__runOriginal)
             return false;
@@ -52,40 +61,21 @@ internal class SexEncounterPatch {
 
     [HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetSexAnimation))]
-    static bool SexEncounterSetSexAnimationPrefix(SexEncounter __instance, bool __runOriginal) {
-        SexChoiceRealismMod.SetSexID(__instance);
-
+    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.JoinThreesome))]
+    static bool SexEncounterJoinThreesomePrefix(SexEncounter __instance, bool __runOriginal, ref CharacterAttributes __0, ref int __1) {
         if (!__runOriginal)
             return false;
 
-        return true;
-    }
-
-    [HarmonyPrefix]
-    [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetThreesomeAnimation))]
-    static bool SexEncounterSetThreesomeAnimationPrefix(SexEncounter __instance, bool __runOriginal) {
-        SexChoiceRealismMod.SetThreesomeSexID(__instance);
-
-        if (!__runOriginal)
+        if (SexChoiceRealismMod.JoinThreesomeFix(__instance, __0, __1))
             return false;
 
         return true;
-    }
-
-    [HarmonyPostfix]
-    [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetHeavyBondageAnimation))]
-    static void SexEncounterSetHeavyBondageAnimationPostfix(SexEncounter __instance) {
-        Plugin.Log.Info($"HeavyBondageAnimation: ID: {__instance.SexID}, Type: {__instance.SexType}");
     }
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetSexAnimation))]
     static void SexEncounterSetSexAnimationPostfix(SexEncounter __instance) {
-        Plugin.Log.Info($"SexAnimation: ID: {__instance.SexID}, Type: {__instance.SexType}");
         RandomReverseMod.Apply(__instance);
     }
 
@@ -93,7 +83,6 @@ internal class SexEncounterPatch {
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetThreesomeAnimation))]
     static void SexEncounterSetThreesomeAnimationPostfix(SexEncounter __instance) {
-        Plugin.Log.Info($"ThreesomeAnimation: ID: {__instance.SexID}, Type: {__instance.SexType}");
         RandomReverseMod.Apply(__instance);
     }
 }

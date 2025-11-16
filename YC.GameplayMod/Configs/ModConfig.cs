@@ -9,22 +9,24 @@ internal class ModConfig {
     internal RandomReverseConfig RandomReverse { get; set; } = new();
     internal SexChoiceRealismConfig SexChoiceRealism { get; set; } = new();
 
-    internal static ModConfig Load( string path ) {
+    internal static ModConfig Load() {
         ModConfig config;
+        string path = Path.Combine( Plugin.ConfigPath, $"{MyPluginInfo.PLUGIN_GUID}.cfg");
         if (File.Exists(path)) {
             string tomlText = File.ReadAllText(path);
             config = TomletMain.To<ModConfig>(tomlText);
         } else {
             config = new ModConfig();
-            Save( path, config);
+            config.Save();
         }
 
         return config;
     }
 
-    internal static void Save(string path, ModConfig modConfig) {
+    internal void Save() {
+        string path = Path.Combine( Plugin.ConfigPath, $"{MyPluginInfo.PLUGIN_GUID}.cfg");
         Directory.CreateDirectory(Path.GetDirectoryName(path));
-        string tomlText = TomletMain.TomlStringFrom(modConfig);
+        string tomlText = TomletMain.TomlStringFrom(this);
         File.WriteAllText(path, tomlText);
     }
 

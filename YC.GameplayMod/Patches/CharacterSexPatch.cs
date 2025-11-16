@@ -25,7 +25,8 @@ internal class CharacterSexPatch {
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(CharacterSex), nameof(CharacterSex.Start))]
     static void CharacterSexStartPostfix(CharacterSex __instance) {
-        GameplayModComponent.RegisterClass(__instance);
+        if (!string.IsNullOrWhiteSpace( __instance.characterName ))
+            GameplayModComponent.RegisterClass(__instance);
     }
 
     [HarmonyPostfix]

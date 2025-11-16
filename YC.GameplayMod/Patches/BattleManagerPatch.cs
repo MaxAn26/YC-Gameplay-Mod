@@ -1,10 +1,10 @@
 ﻿using System;
 
-using BaseMod.Core.Extensions;
-
 using HarmonyLib;
 
 using Il2Cpp;
+
+using Il2CppInterop.Runtime;
 
 using YC.GameplayMod.Mods;
 
@@ -32,7 +32,34 @@ internal class BattleManagerPatch {
     [HarmonyPostfix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.GetNewSexPosition))]
-    static void BattleManagerGetNewSexPositionPostfix(CombatAction __0) {
-        Plugin.Log.Info($"Get new position: Combat action: {__0.actionName}");
+    static void BattleManagerGetNewSexPositionPostfix(CombatAction __0, ref int __result) {
+        int newSexId = SexChoiceRealismMod.GetSexId(__0.caster.characterSex, __0.target.characterSex);
+        if (newSexId > 0)
+            __result = newSexId;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.GetNewSexPositionCharmed))]
+    static void BattleManagerGetNewSexPositionCharmedPostfix(CombatAction __0, ref int __result) {
+        int newSexId = SexChoiceRealismMod.GetSexId(__0.caster.characterSex, __0.target.characterSex);
+        if (newSexId > 0)
+            __result = newSexId;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.GetNewSexPositionSpanking))]
+    static void BattleManagerGetNewSexPositionSpankingPostfix(CombatAction __0, ref int __result) {
+        int newSexId = SexChoiceRealismMod.GetSexId(__0.caster.characterSex, __0.target.characterSex);
+        if (newSexId > 0)
+            __result = newSexId;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.AssistAlly))]
+    static void BattleManagerAssistAllyPostfix(CombatAction __0, int __1) {
+        Plugin.Log.Info($"Assist Ally {__0.actionName} '{__0.caster.characterSex.characterName}' -> '{__0.target.characterSex.characterName}': Slot: {__1}");
     }
 }

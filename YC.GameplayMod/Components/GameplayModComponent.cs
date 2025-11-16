@@ -17,6 +17,7 @@ public class GameplayModComponent : MonoBehaviour {
     internal CharacterAttributes Attributes { get; private set; }
 
     internal int SexInteractions { get; set; } = 0;
+    internal bool IsActiveRole { get; private set; } = false;
     private bool _sexInteractionSet = false;
 
     static GameplayModComponent() {
@@ -40,6 +41,8 @@ public class GameplayModComponent : MonoBehaviour {
                 Plugin.Log.Info($"Register class for character {characterSex.characterName}");
                 Sex = characterSex;
                 Attributes = characterSex.characterAttributes;
+                IsActiveRole = Sex.IsActive;
+                Plugin.Log.Debug($"Saved Role: {(IsActiveRole ? "Active" : "Passive")}");
             } else {
                 Destroy(this);
             }

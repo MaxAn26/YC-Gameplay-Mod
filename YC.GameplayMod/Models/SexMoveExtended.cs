@@ -52,6 +52,21 @@ internal class SexMoveExtended : IComparable<SexMoveExtended> {
     [JsonIgnore]
     internal PositionGroup PositionGroup => (IsThreesome && ID is >= 1000 and < 1600) || (!IsThreesome && Type is >= 1 and <= 5) ? PositionGroup.Foreplay : PositionGroup.Sex;
 
+    [JsonIgnore]
+    internal PositionActionMode PositionAction { 
+        get {
+            PositionActionMode mode = PositionActionMode.None;
+            if (IsPerform)
+                mode |= PositionActionMode.Perform;
+            if (IsCommand)
+                mode |= PositionActionMode.Command;
+
+            if (mode is PositionActionMode.None)
+                mode = PositionActionMode.Perform;
+
+            return mode;
+        } }
+
     public int CompareTo(SexMoveExtended other) => other is null ? 1 : ID.CompareTo(other.ID);
 
     public override bool Equals(object obj) {
@@ -138,6 +153,14 @@ internal enum PositionGroup {
     Foreplay = 1 << 0,
     Sex = 1 << 1,
     Any = Foreplay | Sex,
+}
+
+[Flags]
+internal enum PositionActionMode {
+    None = 0,
+    Command = 1 << 0,
+    Perform = 1 << 1,
+    Any = Command | Perform,
 }
 
 [Flags]

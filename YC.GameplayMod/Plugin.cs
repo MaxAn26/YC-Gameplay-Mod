@@ -16,6 +16,8 @@ using YC.GameplayMod.Patches;
 namespace YC.GameplayMod;
 public class Plugin : MelonMod {
     internal static IPluginLogger Log;
+    internal static ModConfig Config;
+    internal static string ConfigPath;
     internal static string PluginAssets;
     internal static string PluginConfigs;
     internal static string PluginResources;
@@ -24,22 +26,29 @@ public class Plugin : MelonMod {
         base.OnInitializeMelon();
 
         // Plugin startup logic
-        Log = new MelonPluginLogger( new MelonLogger.Instance(MyPluginInfo.PLUGIN_GUID));
-        PluginAssets = Path.Combine(MelonEnvironment.UserDataDirectory, MyPluginInfo.PLUGIN_GUID, "Assets");
-        PluginConfigs = Path.Combine(MelonEnvironment.UserDataDirectory, MyPluginInfo.PLUGIN_GUID, "Configs");
-        PluginResources = Path.Combine(MelonEnvironment.UserDataDirectory, MyPluginInfo.PLUGIN_GUID, "Resources");
+        Log             = new MelonPluginLogger( new MelonLogger.Instance(MyPluginInfo.PLUGIN_GUID));
+        ConfigPath      = MelonEnvironment.UserDataDirectory;
+        PluginAssets    = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Assets");
+        PluginConfigs   = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Configs");
+        PluginResources = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Resources");
 
-        var config = ModConfig.Load(Path.Combine( MelonEnvironment.UserDataDirectory, $"{MyPluginInfo.PLUGIN_GUID}.cfg") );
+        Config = ModConfig.Load();
 
-        DickStraponVisibilityMod.Load(config);
-        RandomReverseMod.Load(config);
-        SexChoiceRealismMod.Load(config);
+        DickStraponVisibilityMod.Load(Config);
+        RandomReverseMod.Load(Config);
+        SexChoiceRealismMod.Load(Config);
 
         HarmonyInstance.PatchAll(typeof(BattleManagerPatch));
         HarmonyInstance.PatchAll(typeof(CharacterSexPatch));
         HarmonyInstance.PatchAll(typeof(SexEncounterPatch));
 
         Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+    }
+
+    public override void OnDeinitializeMelon() {
+        Config?.Save();
+
+        base.OnDeinitializeMelon();
     }
 
     public override void OnSceneWasLoaded(int buildIndex, string sceneName) {

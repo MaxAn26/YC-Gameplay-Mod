@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
 using System.Linq;
 
@@ -12,11 +11,14 @@ using Il2Cpp;
 using Il2CppInterop.Runtime;
 
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.SceneManagement;
 
 using YC.GameplayMod.Components;
 using YC.GameplayMod.Configs;
 using YC.GameplayMod.Models;
+
+using static MelonLoader.MelonLogger;
 
 namespace YC.GameplayMod.Mods;
 internal class SexChoiceRealismMod {
@@ -35,7 +37,6 @@ internal class SexChoiceRealismMod {
     #region Storage
     internal static CharacterDataa Character => CharacterDataa.Instance;
     internal static SexSystem SexSystem;
-    internal static int LastSexType = 0;
     internal static SexMoveExtended LastMove;
     #endregion
 
@@ -55,7 +56,7 @@ internal class SexChoiceRealismMod {
             SexSystem = Zessentials.Instance.gameObject.GetComponentWithCast<SexSystem>();
 
             bool fromFile = false;
-            if (JsonUtils.TryDeserialize(Plugin.PluginResources, "SexMoves.json", out List<SexMoveExtended> extendedSexMoves))                 
+            if (JsonUtils.TryDeserialize(Plugin.PluginResources, "SexMoves.json", out List<SexMoveExtended> extendedSexMoves))
                 fromFile = true;
 
             if (!fromFile) {
@@ -73,10 +74,10 @@ internal class SexChoiceRealismMod {
                 foreach (var item in poses) {
                     var move = extendedSexMoves.FirstOrDefault(p => p.ID == item.ID);
                     if (move is null)
-                    if (!extendedSexMoves.Contains(item))
-                        extendedSexMoves.Add(item);
-                    else 
-                        move.Update(item);
+                        if (!extendedSexMoves.Contains(item))
+                            extendedSexMoves.Add(item);
+                        else
+                            move.Update(item);
                 }
 
                 extendedSexMoves.Sort();
@@ -87,6 +88,7 @@ internal class SexChoiceRealismMod {
                 } else {
                     Plugin.Log.Info($"SexMoves.json was not updated");
                 }
+                UpdateMoves = false;
             }
 
             if (extendedSexMoves.Count > 0)
@@ -107,96 +109,183 @@ internal class SexChoiceRealismMod {
         }
     }
 
-    internal static void SetSexID(SexEncounter sexEncounter) {
-        try {
-            if (!Enabled || SceneManager.GetActiveScene().buildIndex < 2) {
-                Plugin.Log.Info("Exit due execute condition");
-                return;
-            }
-
-            if (sexEncounter is null) {
-                Plugin.Log.Info("Exit due SexEncounter is NULL");
-                return;
-            }
-
-            if (SexMoves.Count == 0) {
-                Plugin.Log.Info("Exit due EMPTY SexPositions");
-                return;
-            }
-
-            if (!sexEncounter.CasterSex.IsMale && !sexEncounter.CasterSex.IsFuta) {
-                Plugin.Log.Info("Reset Caster Active/Futa for strapon");
-                sexEncounter.CasterActive = false;
-                sexEncounter.CasterFuta = false;
-            }
-
-            if (!sexEncounter.TargetSex.IsMale && !sexEncounter.TargetSex.IsFuta) {
-                Plugin.Log.Info("Reset Target Active/Futa for strapon");
-                sexEncounter.TargetActive = false;
-                sexEncounter.TargetFuta = false;
-            }
-
-            var move = GetSexMove(sexEncounter);
-            if (move is null) {
-                Plugin.Log.Info("Exit due SexMove is null");
-                return;
-            }
-
-            Plugin.Log.Info($"Set SexMove: ID: {move.ID}({move.Type}) Name: '{move.Name}'");
-            sexEncounter.SexType = move.Type;
-            sexEncounter.SexID = move.ID;
-        } catch (Exception ex) {
-            Plugin.Log.Error(ex);
+    internal static int GetSexId(CharacterSex casterSex, CharacterSex targetSex, CharacterSex assistSex = null) {
+        if (!Enabled || SceneManager.GetActiveScene().buildIndex < 2) {
+            Plugin.Log.Info("Exit due execute condition");
+            return -1; //-1
         }
+
+        if (casterSex is null || targetSex is null) {
+            Plugin.Log.Info("Exit due casterSex OR targetSex is NULL");
+            return -1;
+        }
+
+        if (SexMoves.Count == 0) {
+            Plugin.Log.Info("Exit due EMPTY SexPositions");
+            return -1;
+        }
+
+        if (!casterSex.gameObject.TryGetComponentWithCast(out GameplayModComponent casterComponent)
+            || !targetSex.gameObject.TryGetComponentWithCast(out GameplayModComponent targetComponent)) {
+            return -1;
+        }
+
+        // Reset Active state
+        casterSex.IsActive = casterComponent.IsActiveRole;
+        targetSex.IsActive = targetComponent.IsActiveRole;
+
+        if (assistSex is not null && assistSex.gameObject.TryGetComponentWithCast(out GameplayModComponent _)) {
+            assistSex = casterSex.currentSexEncounter.AssistSex;
+        }
+
+        if (assistSex is not null) {
+            assistSex.IsActive = casterSex.IsActive;
+        }
+
+        var (positionGroup, positionAction) = ChooseChanceMixed(casterSex, targetSex);
+        if (positionGroup is PositionGroup.Foreplay) {
+            if (casterSex.IsActive && !casterSex.IsFuta && !casterSex.IsMale) {
+                Plugin.Log.Debug($"Reset Caster role for Foreplay");
+                casterSex.IsActive = false;
+            }
+
+            if (targetSex.IsActive && !targetSex.IsFuta && !targetSex.IsMale) {
+                Plugin.Log.Debug($"Reset Target role for Foreplay");
+                targetSex.IsActive = false;
+            }
+
+            if (assistSex is not null) {
+                assistSex.IsActive = casterSex.IsActive;
+            }
+        }
+
+        List<(SexMoveExtended move, int score)> sexMoves = GetCharacterSexMoves( positionGroup, positionAction, casterSex, targetSex, assistSex );
+
+        if (sexMoves.Count <= 0) {
+            Plugin.Log.Info("Exit due EMPTY character sexMoves");
+            return -1;
+        }
+
+        var move = ChooseWeightedRandom(sexMoves);
+        LastMove = move;
+
+        return move is not null ? move.ID : -1;
     }
 
-    internal static void SetThreesomeSexID(SexEncounter sexEncounter) {
+    internal static bool JoinThreesomeFix(SexEncounter sexEncounter, CharacterAttributes joinedCharacter, int oldSexID) {
         try {
-            if (!Enabled || SceneManager.GetActiveScene().buildIndex < 2) {
-                Plugin.Log.Info("Exit due execute condition");
-                return;
+            if (joinedCharacter == null) { return false; }
+
+            CharacterSex casterSex          = sexEncounter.CasterSex;
+            CharacterSex currentCasterSex   = sexEncounter.CasterSex;
+            CharacterSex targetSex          = sexEncounter.TargetSex;
+            CharacterSex currentTargetSex   = sexEncounter.TargetSex;
+            CharacterSex assistSex          = joinedCharacter.characterSex;
+            CharacterSex currentAssistSex   = joinedCharacter.characterSex;
+
+            if (assistSex.IsPlayer) {
+                Plugin.Log.Debug($"Player join to Threesome");
+                SexEncounter.print($"Player join to Threesome");
+                if (casterSex.characterAttributes.combatAI.isAlly && !casterSex.characterAttributes.CheckForStatus("Charmed")) {
+                    casterSex = currentAssistSex;
+                    targetSex = currentTargetSex;
+                    assistSex = currentCasterSex;
+                } else {
+                    casterSex = currentAssistSex;
+                    targetSex = currentCasterSex;
+                    assistSex = currentTargetSex;
+                }
+
+                if (CharacterDataa.Instance.currentState == CharacterDataa.BattleState.Fucking) {
+                    sexEncounter.battleManager.combatUIManager.EnableSexfightUI();
+                } else {
+                    sexEncounter.battleManager.combatUIManager.DisableSexfightUI();
+                }
+            } else if (assistSex.characterAttributes.combatAI.isAlly) {
+                Plugin.Log.Debug($"Ally join to Threesome");
+                SexEncounter.print($"Ally join to Threesome");
+                if (targetSex.IsPlayer) {
+                    casterSex = currentTargetSex;
+                    targetSex = currentCasterSex;
+                    assistSex = currentAssistSex;
+                } else if (targetSex.characterAttributes.combatAI.isAlly) {
+                    casterSex = currentAssistSex;
+                    targetSex = currentCasterSex;
+                    assistSex = currentTargetSex;
+                } else {
+                    casterSex = currentCasterSex;
+                    targetSex = currentTargetSex;
+                    assistSex = currentAssistSex;
+                }
+            } else if (assistSex.characterAttributes.combatAI.isElite) {
+                Plugin.Log.Debug($"Elite enemy join to Threesome");
+                SexEncounter.print($"Elite enemy join to Threesome");
+                if (casterSex.IsPlayer || casterSex.characterAttributes.combatAI.isAlly) {
+                    casterSex = currentAssistSex;
+                    targetSex = currentCasterSex;
+                    assistSex = currentTargetSex;
+                } else {
+                    casterSex = currentAssistSex;
+                    targetSex = currentTargetSex;
+                    assistSex = currentCasterSex;
+                }
+            } else {
+                Plugin.Log.Debug($"Enemy join to Threesome");
+                SexEncounter.print($"Enemy join to Threesome");
+                if (casterSex.IsPlayer || casterSex.characterAttributes.combatAI.isAlly) {
+                    casterSex = currentTargetSex;
+                    targetSex = currentCasterSex;
+                    assistSex = currentAssistSex;
+                } else {
+                    casterSex = currentCasterSex;
+                    targetSex = currentTargetSex;
+                    assistSex = currentAssistSex;
+                }
             }
 
-            if (sexEncounter is null) {
-                Plugin.Log.Info("Exit due SexSystem is NULL");
-                return;
-            }
+            assistSex.currentSexEncounter = sexEncounter;
+            casterSex.currentSexEncounter = sexEncounter;
+            targetSex.currentSexEncounter = sexEncounter;
 
-            if (SexMoves.Count == 0) {
-                Plugin.Log.Info("Exit due EMPTY SexPositions");
-                return;
-            }
+            sexEncounter.Assist = assistSex.gameObject;
+            sexEncounter.AssistSex = assistSex;
+            sexEncounter.AssistAnim = assistSex.GetComponent<Animator>();
+            sexEncounter.AssistAttributes = assistSex.characterAttributes;
+            sexEncounter.AssistMale = assistSex.IsMale;
+            sexEncounter.AssistActive = assistSex.IsActive;
+            sexEncounter.AssistFuta = assistSex.IsFuta;
 
-            int cums = Mathf.Min(sexEncounter.CasterSex.characterAttributes.cumsInSuccession, sexEncounter.TargetSex.characterAttributes.cumsInSuccession);
-            if (!sexEncounter.CasterSex.IsMale && !sexEncounter.CasterSex.IsFuta) {
-                Plugin.Log.Info("Reset Caster Active/Futa for strapon");
-                sexEncounter.CasterActive = false;
-                sexEncounter.CasterFuta = false;
-            }
+            sexEncounter.Caster = casterSex.gameObject;
+            sexEncounter.CasterSex = casterSex;
+            sexEncounter.CasterAnim = casterSex.GetComponent<Animator>();
+            sexEncounter.CasterAttributes = casterSex.characterAttributes;
+            sexEncounter.CasterMale = casterSex.IsMale;
+            sexEncounter.CasterActive = casterSex.IsActive;
+            sexEncounter.CasterFuta = casterSex.IsFuta;
 
-            if (!sexEncounter.TargetSex.IsMale && !sexEncounter.TargetSex.IsFuta) {
-                Plugin.Log.Info("Reset Target Active/Futa for strapon");
-                sexEncounter.TargetActive = false;
-                sexEncounter.TargetFuta = false;
-            }
+            sexEncounter.Target = targetSex.gameObject;
+            sexEncounter.TargetSex = targetSex;
+            sexEncounter.TargetAnim = targetSex.GetComponent<Animator>();
+            sexEncounter.TargetAttributes = targetSex.characterAttributes;
+            sexEncounter.TargetMale = targetSex.IsMale;
+            sexEncounter.TargetActive = targetSex.IsActive;
+            sexEncounter.TargetFuta = targetSex.IsFuta;
 
-            if (!sexEncounter.AssistSex.IsMale && !sexEncounter.AssistSex.IsFuta) {
-                Plugin.Log.Info("Reset Assist Active/Futa for strapon");
-                sexEncounter.AssistActive = sexEncounter.CasterActive;
-                sexEncounter.AssistFuta = sexEncounter.CasterFuta;
-            }
+            sexEncounter.IsThreesome = true;
+            sexEncounter.ThreesomeIsCasterFriend = true;
+            sexEncounter.CasterIsAttacker = true;
 
-            var move = GetThreesomeSexMove(sexEncounter);
-            if (move is null) {
-                Plugin.Log.Info("Exit due SexMove is null");
-                return;
-            }
+            int newSexId = GetSexId(sexEncounter.CasterSex, targetSex, assistSex);
+            if (newSexId > 0)
+                oldSexID = newSexId;
 
-            Plugin.Log.Info($"Set SexMove: ID: {move.ID}({move.Type}) Name: '{move.Name}'");
-            sexEncounter.SexType = move.Type;
-            sexEncounter.SexID = move.ID;
+            sexEncounter.SexID = oldSexID;
+            sexEncounter.StartThreesome();
+
+            return true;
         } catch (Exception ex) {
-            Plugin.Log.Error(ex);
+            Plugin.Log.Error(ex.Message);
+            return false;
         }
     }
 
@@ -204,10 +293,10 @@ internal class SexChoiceRealismMod {
         Plugin.Log.Info("Creating SexMoves.json...");
         List<SexMoveExtended> poses = [];
 
-        if (Zessentials.Instance.gameObject.TryGetComponentWithCast( out CombatHolder holder )) {
+        if (Zessentials.Instance.gameObject.TryGetComponentWithCast(out CombatHolder holder)) {
             Plugin.Log.Info("Get SexMoves from CombatHolder");
             foreach (var sexMove in holder.Sexmoves) {
-                if ( holder.AvailableSexMoves.Contains(sexMove.ID) ) {
+                if (holder.AvailableSexMoves.Contains(sexMove.ID)) {
                     var move = SexMoveExtended.FromSexMove(sexMove);
                     if (move is not null)
                         poses.Add(move);
@@ -288,142 +377,8 @@ internal class SexChoiceRealismMod {
         return personalitySexTypes;
     }
 
-    private static SexMoveExtended GetSexMove(SexEncounter sexEncounter) {
-        List<(SexMoveExtended move, int score)> sexMoves = GetCharacterSexMoves( sexEncounter );
 
-        if (sexMoves.Count <= 0)
-            return null;
-
-        var move = ChooseWeightedRandom(sexMoves);
-        LastSexType = move.Type;
-        LastMove = move;
-        return move;
-    }
-
-    private static SexMoveExtended GetThreesomeSexMove(SexEncounter sexEncounter ) {
-        List<(SexMoveExtended move, int score)> sexMoves = GetCharacterSexMoves( sexEncounter );
-        
-        if (sexMoves.Count <= 0)
-            return null;
-
-        var move = ChooseWeightedRandom(sexMoves);
-        LastSexType = move.Type;
-        LastMove = move;
-        return move;
-    }
-
-    private static List<(SexMoveExtended move, int score)> GetCharacterSexMoves(SexEncounter sexEncounter ) {
-        List<(SexMoveExtended move, int score)> sexMoves = [];
-        CharacterGender casterGender = GetCharacterGender( sexEncounter.CasterSex );
-        CharacterRole casterRole = sexEncounter.CasterActive ? CharacterRole.Active : CharacterRole.Passive;
-        CharacterStatus casterStatus = GetCharacterStatus( sexEncounter.CasterAttributes );
-        CharacterGender targetGender = GetCharacterGender( sexEncounter.TargetSex );
-        CharacterRole targetRole = sexEncounter.TargetActive ? CharacterRole.Active : CharacterRole.Passive;
-        CharacterStatus targetStatus = GetCharacterStatus( sexEncounter.TargetAttributes );
-        CharacterGender assistGender = sexEncounter.IsThreesome ? GetCharacterGender( sexEncounter.AssistSex ) : CharacterGender.Any;
-        CharacterRole assistRole = sexEncounter.IsThreesome 
-            ? sexEncounter.AssistActive ? CharacterRole.Active : CharacterRole.Passive
-            : CharacterRole.Any;
-
-        bool allowCommand = targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused);
-        PositionGroup positionGroup = ChooseChanceMixed(sexEncounter, casterStatus, targetStatus);
-        bool isThreesome = sexEncounter.IsThreesome;
-
-        int personalityId = sexEncounter.CasterSex.IsPlayer
-            ? CharacterDataa.Instance.adultSettingsDATA.SexGameplayAI
-            : sexEncounter.CasterAttributes.enemyData?.statsDATA.EnemyPersonality ?? 0;
-        PersonalitySexTags sexType = PersonalitySexTypes.FirstOrDefault( t => t.Id == personalityId )?.UpdateByStatus(casterStatus);
-                
-        Plugin.Log.Info($"- Caster Gender: {casterGender}; Caster Role: {casterRole}; Caster Status: {casterStatus}");
-        Plugin.Log.Info($"- Target: Gender: {targetGender}; Caster Role: {targetRole}; Caster Status: {targetStatus}; Target charmed: {(allowCommand ? "Yes" : "No")}");
-        if (sexEncounter.IsThreesome)
-            Plugin.Log.Info($"- Assist: Gender: {assistGender}; Caster Role: {assistRole}");
-
-        foreach (var sexMove in SexMoves) {
-            if (sexMove.IsDisabled)
-                continue;
-
-            if (!positionGroup.HasFlag( sexMove.PositionGroup ))
-                continue;
-
-            if (LastMove is not null && sexMove.ID == LastMove.ID)
-                continue;
-
-            if (sexMove.IsThreesome != isThreesome)
-                continue;
-
-            if (sexMove.IsCommand && !sexMove.IsPerform){
-                if (!allowCommand)
-                    continue;
-            }
-
-            if (!CheckMainRolesAndGenders(sexMove, casterGender, casterRole, targetGender, targetRole))
-                continue;
-
-            if (sexMove.IsThreesome && (!sexMove.AssistGender.HasFlag(assistGender) || !sexMove.AssistRole.HasFlag(assistRole)))
-                continue;
-
-            int score = 0;
-            if (sexEncounter.CasterSex.IsPlayer && UsePlayerPreferredPositions) {
-                if (!Character.statusDATA.PreferredSex.Contains(sexMove.ID))
-                    continue;
-
-                score = 1;
-            } else {
-                score = GetPositionScore(sexMove.SexTags, sexType);
-            }
-
-            sexMoves.Add((sexMove, score));
-        }
-        Plugin.Log.Info($"Selected Sex moves: {sexMoves.Count} / {SexMoves.Count}");
-
-        return sexMoves;
-    }
-
-    static PositionGroup ChooseChanceMixed(SexEncounter sexEncounter, CharacterStatus casterStatus, CharacterStatus targetStatus) {
-        try {
-            int sexChance = 40;
-            if ( sexEncounter.CasterSex.gameObject.TryGetComponentWithCast(out GameplayModComponent casterComponent) 
-                && sexEncounter.TargetSex.gameObject.TryGetComponentWithCast(out GameplayModComponent targetComponent)) {
-                int casterCumsInSuccession  = casterComponent.SexInteractions;
-                int casterCurrentPleasure   = casterComponent.Attributes.currentPleasure;
-                int targetCumsInSuccession  = targetComponent.SexInteractions;
-                int targetCurrentPleasure   = targetComponent.Attributes.currentPleasure;
-
-                int delta                   = casterCumsInSuccession - targetCumsInSuccession;
-                int baseChance              = Math.Abs(delta) * 10;
-                int casterBonus             = casterCumsInSuccession * 3;
-                int casterStatusBonus       = casterStatus.HasFlag(CharacterStatus.Collared) || casterStatus.HasFlag(CharacterStatus.Aroused) || casterStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
-                int targetBonus             = targetCumsInSuccession * 5;
-                int targetStatusBonus       = targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
-                int plesureState            = Math.Min(casterCurrentPleasure, targetCurrentPleasure) / 2500;
-                int plesureBonus            = Convert.ToInt32(Math.Pow(5, plesureState));
-
-                sexChance = Math.Clamp(baseChance + plesureBonus + targetBonus + targetStatusBonus + casterStatusBonus - casterBonus, 5, 95 );
-            }
-
-            PositionGroup group = RandomUtils.Chance(sexChance) ? PositionGroup.Sex : PositionGroup.Foreplay;
-            Plugin.Log.Info($"Select Sex moves: Chance: {sexChance} => Type: {group}");
-            return group;
-        } catch (Exception ex) {
-            Plugin.Log.Error(ex);
-            return PositionGroup.Any;
-        }
-    }
-
-    static CharacterGender GetCharacterGender( CharacterSex characterSex ) {
-        CharacterGender gender;
-        if (characterSex.IsMale)
-            gender = CharacterGender.Male;
-        else if (characterSex.IsFuta)
-            gender = CharacterGender.Futa;
-        else
-            gender = CharacterGender.Female;
-
-        return gender;
-    }
-
-    static CharacterStatus GetCharacterStatus(CharacterAttributes characterAttributes) {
+    private static CharacterStatus GetCharacterStatus(CharacterAttributes characterAttributes) {
         CharacterStatus status = CharacterStatus.None;
 
         if (characterAttributes.activeBuffs.Count > 0) {
@@ -442,7 +397,118 @@ internal class SexChoiceRealismMod {
         return status;
     }
 
-    static bool CheckMainRolesAndGenders(SexMoveExtended sexMove, CharacterGender casterGender, CharacterRole casterRole, CharacterGender targetGender, CharacterRole targetRole) {
+    private static (PositionGroup group, PositionActionMode actionMode ) ChooseChanceMixed(CharacterSex casterSex, CharacterSex targetSex) {
+        CharacterStatus casterStatus = GetCharacterStatus( casterSex.characterAttributes);
+        CharacterStatus targetStatus = GetCharacterStatus( targetSex.characterAttributes );
+
+        try {
+            int sexChance = 40;
+            if (casterSex.gameObject.TryGetComponentWithCast(out GameplayModComponent casterComponent)
+                && targetSex.gameObject.TryGetComponentWithCast(out GameplayModComponent targetComponent)) {
+                int casterCumsInSuccession  = casterComponent.SexInteractions;
+                int casterCurrentPleasure   = casterComponent.Attributes.currentPleasure;
+                int targetCumsInSuccession  = targetComponent.SexInteractions;
+                int targetCurrentPleasure   = targetComponent.Attributes.currentPleasure;
+
+                int delta                   = casterCumsInSuccession - targetCumsInSuccession;
+                if (delta == 0)
+                    delta = casterCumsInSuccession;
+
+                int baseChance              = Math.Abs(delta) * 10;
+                int casterBonus             = casterCumsInSuccession * 3;
+                int casterStatusBonus       = casterStatus.HasFlag(CharacterStatus.Collared) || casterStatus.HasFlag(CharacterStatus.Aroused) || casterStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
+                int targetBonus             = targetCumsInSuccession * 5;
+                int targetStatusBonus       = targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
+                int plesureState            = Math.Min(casterCurrentPleasure, targetCurrentPleasure) / 2500;
+                int plesureBonus            = Convert.ToInt32(Math.Pow(5, plesureState));
+
+                sexChance = Math.Clamp(baseChance + plesureBonus + targetBonus + targetStatusBonus + casterStatusBonus - casterBonus, 5, 95);
+            }
+
+            PositionGroup group = RandomUtils.Chance(sexChance) ? PositionGroup.Sex : PositionGroup.Foreplay;
+            PositionActionMode positionAction = PositionActionMode.Perform;
+            if (targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused) || targetStatus.HasFlag(CharacterStatus.Charmed))
+                positionAction |= PositionActionMode.Command;
+            
+            Plugin.Log.Info($"Select Sex moves: Chance: {sexChance} => Type: {group}, Mode: {positionAction}");
+            return (group, positionAction);
+        } catch (Exception ex) {
+            Plugin.Log.Error(ex);
+            return (PositionGroup.Any, PositionActionMode.Any);
+        }
+    }
+
+    private static List<(SexMoveExtended move, int score)> GetCharacterSexMoves(PositionGroup positionGroup, PositionActionMode positionAction, CharacterSex casterSex, CharacterSex targetSex, CharacterSex assistSex) {
+        List<(SexMoveExtended move, int score)> sexMoves = [];
+        CharacterGender casterGender = GetCharacterGender( casterSex );
+        CharacterRole casterRole = casterSex.IsActive ? CharacterRole.Active : CharacterRole.Passive;
+
+        CharacterGender targetGender = GetCharacterGender( targetSex );
+        CharacterRole targetRole = targetSex.IsActive ? CharacterRole.Active : CharacterRole.Passive;
+
+        bool isThreesome = assistSex is not null && casterSex.currentSexEncounter?.IsThreesome == true;
+        CharacterGender assistGender = isThreesome ? GetCharacterGender( assistSex ) : CharacterGender.Any;
+        CharacterRole assistRole = isThreesome
+            ? assistSex.IsActive ? CharacterRole.Active : CharacterRole.Passive
+            : CharacterRole.Any;
+        
+        int personalityId = casterSex.IsPlayer
+            ? CharacterDataa.Instance.adultSettingsDATA.SexGameplayAI
+            : casterSex.characterAttributes.enemyData?.statsDATA.EnemyPersonality ?? 0;
+        PersonalitySexTags sexType = PersonalitySexTypes.FirstOrDefault( t => t.Id == personalityId )?.UpdateByStatus(GetCharacterStatus(casterSex.characterAttributes));
+
+        foreach (var sexMove in SexMoves) {
+            if (sexMove.IsDisabled)
+                continue;
+
+            if (!positionGroup.HasFlag(sexMove.PositionGroup))
+                continue;
+
+            if ((positionAction & sexMove.PositionAction) == 0)
+                continue;
+
+            if (LastMove is not null && sexMove.ID == LastMove.ID)
+                continue;
+
+            if (sexMove.IsThreesome != isThreesome)
+                continue;
+
+            if (!CheckMainRolesAndGenders(sexMove, casterGender, casterRole, targetGender, targetRole))
+                continue;
+
+            if (sexMove.IsThreesome && (!sexMove.AssistGender.HasFlag(assistGender) || !sexMove.AssistRole.HasFlag(assistRole)))
+                continue;
+
+            int score = 0;
+            if (casterSex.IsPlayer && UsePlayerPreferredPositions) {
+                if (!Character.statusDATA.PreferredSex.Contains(sexMove.ID))
+                    continue;
+
+                score = 1;
+            } else {
+                score = GetPositionScore(sexMove.SexTags, sexType);
+            }
+
+            sexMoves.Add((sexMove, score));
+        }
+        Plugin.Log.Debug($"Selected Sex moves: {sexMoves.Count} / {SexMoves.Count}");
+
+        return sexMoves;
+    }
+
+    private static CharacterGender GetCharacterGender(CharacterSex characterSex) {
+        CharacterGender gender;
+        if (characterSex.IsMale)
+            gender = CharacterGender.Male;
+        else if (characterSex.IsFuta)
+            gender = CharacterGender.Futa;
+        else
+            gender = CharacterGender.Female;
+
+        return gender;
+    }
+
+    private static bool CheckMainRolesAndGenders(SexMoveExtended sexMove, CharacterGender casterGender, CharacterRole casterRole, CharacterGender targetGender, CharacterRole targetRole) {
         // Обычная проверка
         if (sexMove.CasterGender.HasFlag(casterGender) && sexMove.CasterRole.HasFlag(casterRole)
             && sexMove.TargetGender.HasFlag(targetGender) && sexMove.TargetRole.HasFlag(targetRole)) {
@@ -460,7 +526,7 @@ internal class SexChoiceRealismMod {
         return false;
     }
 
-    static int GetPositionScore(SexTag positionTags, PersonalitySexTags personality) {
+    private static int GetPositionScore(SexTag positionTags, PersonalitySexTags personality) {
         if (personality == null)
             return 1;
 
@@ -491,13 +557,13 @@ internal class SexChoiceRealismMod {
             }
         }
 
-        if (!hasFlags) 
+        if (!hasFlags)
             score = neutralScore;
 
         return score;
     }
 
-    static SexMoveExtended ChooseWeightedRandom(List<(SexMoveExtended move, int score)> moves) {
+    private static SexMoveExtended ChooseWeightedRandom(List<(SexMoveExtended move, int score)> moves) {
         int totalWeight = moves.Sum(m => m.score);
         if (totalWeight == 0)
             return null;
