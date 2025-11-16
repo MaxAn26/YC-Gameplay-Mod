@@ -90,4 +90,28 @@ internal static class UnloadService {
             Plugin.Log.Error(ex.Message);
         }
     }
+
+    internal static void UnloadCombatActions() {
+        try {
+            List<CombatActionItem> actionsList = [];
+            Plugin.Log.Info("Try find CombatAction in Resources");
+            var actionsObj = Resources.FindObjectsOfTypeAll( Il2CppType.From( typeof(CombatAction) ) );
+            foreach (var actionObj in actionsObj) {
+                var action = actionObj.TryCast<CombatAction>();
+                if (action is not null) {
+                    var item = CombatActionItem.FromCombatTalent( action );
+                    actionsList.Add(item);
+                }
+            }
+
+            Plugin.Log.Info($"Prepared {actionsList.Count}/{actionsObj.Count} CombatAction items");
+            if (JsonUtils.TrySerialize(Plugin.PluginResources, "CombatActions.json", actionsList, false)) {
+                Plugin.Log.Info($"CombatActions.json was created in {Plugin.PluginResources}");
+            } else {
+                Plugin.Log.Info("CombatActions.json was NOT created");
+            }
+        } catch (Exception ex) {
+            Plugin.Log.Error(ex.Message);
+        }
+    }
 }

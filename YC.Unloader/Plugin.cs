@@ -30,6 +30,7 @@ public class Plugin : MelonMod {
     public override void OnSceneWasLoaded(int buildIndex, string sceneName) {
         if (buildIndex == 2) {
             UnloadService.UnloadClothes();
+            UnloadService.UnloadCombatActions();
             UnloadService.UnloadCombatBuffs();
             UnloadService.UnloadCombatTalents();
         }
