@@ -28,6 +28,7 @@ internal class ModConfig {
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         string tomlText = TomletMain.TomlStringFrom(this);
         File.WriteAllText(path, tomlText);
+        Plugin.Log.Info($"Save '{MyPluginInfo.PLUGIN_GUID}' configuration to: '{path}'");
     }
 
     internal class DickStraponVisibilityConfig {

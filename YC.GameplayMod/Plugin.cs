@@ -45,10 +45,10 @@ public class Plugin : MelonMod {
         Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
 
-    public override void OnDeinitializeMelon() {
+    public override void OnPreferencesSaved() {
         Config?.Save();
 
-        base.OnDeinitializeMelon();
+        base.OnPreferencesSaved();
     }
 
     public override void OnSceneWasLoaded(int buildIndex, string sceneName) {
