@@ -11,14 +11,11 @@ using Il2Cpp;
 using Il2CppInterop.Runtime;
 
 using UnityEngine;
-using UnityEngine.Assertions;
 using UnityEngine.SceneManagement;
 
 using YC.GameplayMod.Components;
 using YC.GameplayMod.Configs;
 using YC.GameplayMod.Models;
-
-using static MelonLoader.MelonLogger;
 
 namespace YC.GameplayMod.Mods;
 internal class SexChoiceRealismMod {
@@ -405,9 +402,9 @@ internal class SexChoiceRealismMod {
             int sexChance = 40;
             if (casterSex.gameObject.TryGetComponentWithCast(out GameplayModComponent casterComponent)
                 && targetSex.gameObject.TryGetComponentWithCast(out GameplayModComponent targetComponent)) {
-                int casterCumsInSuccession  = casterComponent.SexInteractions;
+                int casterCumsInSuccession  = casterComponent.CumsCount;
                 int casterCurrentPleasure   = casterComponent.Attributes.currentPleasure;
-                int targetCumsInSuccession  = targetComponent.SexInteractions;
+                int targetCumsInSuccession  = targetComponent.CumsCount;
                 int targetCurrentPleasure   = targetComponent.Attributes.currentPleasure;
 
                 int delta                   = casterCumsInSuccession - targetCumsInSuccession;
@@ -416,9 +413,9 @@ internal class SexChoiceRealismMod {
 
                 int baseChance              = Math.Abs(delta) * 10;
                 int casterBonus             = casterCumsInSuccession * 3;
-                int casterStatusBonus       = casterStatus.HasFlag(CharacterStatus.Collared) || casterStatus.HasFlag(CharacterStatus.Aroused) || casterStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
+                int casterStatusBonus       = casterStatus.HasFlag(CharacterStatus.Aroused) || casterStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
                 int targetBonus             = targetCumsInSuccession * 5;
-                int targetStatusBonus       = targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
+                int targetStatusBonus       = targetStatus.HasFlag(CharacterStatus.Aroused) || targetStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
                 int plesureState            = Math.Min(casterCurrentPleasure, targetCurrentPleasure) / 2500;
                 int plesureBonus            = Convert.ToInt32(Math.Pow(5, plesureState));
 

@@ -1,16 +1,8 @@
 ﻿using System;
 
-using BaseMod.Core.Extensions;
-
 using HarmonyLib;
 
 using Il2Cpp;
-
-using Il2CppInterop.Runtime;
-
-using Il2CppSystem.Diagnostics;
-
-using UnityEngine;
 
 using YC.GameplayMod.Mods;
 

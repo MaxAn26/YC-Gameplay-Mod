@@ -16,7 +16,7 @@ public class GameplayModComponent : MonoBehaviour {
     internal CharacterSex Sex { get; private set; }
     internal CharacterAttributes Attributes { get; private set; }
 
-    internal int SexInteractions { get; set; } = 0;
+    internal int CumsCount { get; set; } = 0;
     internal bool IsActiveRole { get; private set; } = false;
     private bool _sexInteractionSet = false;
 
@@ -54,9 +54,9 @@ public class GameplayModComponent : MonoBehaviour {
     }
 
     public void LateUpdate() {
-        if (Sex.currentSexEncounter is not null && Sex.currentSexEncounter.IsCumming) {
+        if (Sex.ThisCharacterCumming) {
             if (!_sexInteractionSet) {
-                SexInteractions++;
+                CumsCount++;
                 _sexInteractionSet = true;
             }
         } else {

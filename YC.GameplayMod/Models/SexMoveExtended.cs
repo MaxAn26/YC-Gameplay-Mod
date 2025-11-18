@@ -8,7 +8,6 @@ internal class SexMoveExtended : IComparable<SexMoveExtended> {
     private CharacterGender _assistGender = CharacterGender.Any;
     private CharacterRole _assistRole = CharacterRole.Any;
 
-
     public bool IsDisabled { get; set; }
     public int Type { get; set; }
     public int ID { get; set; }

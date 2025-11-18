@@ -53,7 +53,7 @@ internal class RandomReverseMod {
                 return;
             }
 
-            if (AlwaysWhenTargetCharmed && (sexEncounter.TargetSex.IsCharmed || sexEncounter.CasterAttributes.CheckForStatus("Charmed"))) {
+            if (AlwaysWhenTargetCharmed && (sexEncounter.TargetSex.IsCharmed || sexEncounter.TargetAttributes.CheckForStatus("Charmed"))) {
                 ActivateReverse(sexEncounter);
                 return;
             }
