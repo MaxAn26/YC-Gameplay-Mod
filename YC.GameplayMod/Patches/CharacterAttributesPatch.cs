@@ -20,7 +20,14 @@ internal class CharacterAttributesPatch {
     [HarmonyPostfix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.SetupSexPositions))]
-    static void CharacterAttributesMethodNamePostfix(CharacterAttributes __instance) {
+    static void CharacterAttributesSetupSexPositionsPostfix(CharacterAttributes __instance) {
         Plugin.Log.Info($"Setup Sex Positions for '{__instance.characterSex.characterName}'");
+    }
+
+    [HarmonyPostfix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.Death))]
+    static void CharacterAttributesDeathPostfix(CharacterAttributes __instance) {
+        CharacterAttributes.print($"{__instance.characterName} is DEAD");
     }
 }

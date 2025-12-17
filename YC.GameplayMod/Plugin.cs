@@ -1,12 +1,12 @@
 ﻿using System.IO;
 
+using BaseMod.Core;
 using BaseMod.Core.Logger;
 
 using MelonLoader;
 using MelonLoader.Utils;
 
 using YC.GameplayMod;
-using YC.GameplayMod.Configs;
 using YC.GameplayMod.Mods;
 using YC.GameplayMod.Patches;
 
@@ -16,7 +16,6 @@ using YC.GameplayMod.Patches;
 namespace YC.GameplayMod;
 public class Plugin : MelonMod {
     internal static IPluginLogger Log;
-    internal static ModConfig Config;
     internal static string ConfigPath;
     internal static string PluginAssets;
     internal static string PluginConfigs;
@@ -32,23 +31,22 @@ public class Plugin : MelonMod {
         PluginConfigs   = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Configs");
         PluginResources = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Resources");
 
-        Config = ModConfig.Load();
+        PluginConfig config = new($"{MyPluginInfo.PLUGIN_GUID}.cfg");
 
-        DickStraponVisibilityMod.Load(Config);
-        RandomReverseMod.Load(Config);
-        SexChoiceRealismMod.Load(Config);
+        DickStraponVisibilityMod.Load(config);
+        GameFixMod.Load(config);
+        RandomReverseMod.Load(config);
+        SexChoiceRealismMod.Load(config);
 
         HarmonyInstance.PatchAll(typeof(BattleManagerPatch));
         HarmonyInstance.PatchAll(typeof(CharacterSexPatch));
         HarmonyInstance.PatchAll(typeof(SexEncounterPatch));
 
+#if DEBUG
+        HarmonyInstance.PatchAll(typeof(DebugPatch));
+#endif
+
         Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
-    }
-
-    public override void OnPreferencesSaved() {
-        Config?.Save();
-
-        base.OnPreferencesSaved();
     }
 
     public override void OnSceneWasLoaded(int buildIndex, string sceneName) {

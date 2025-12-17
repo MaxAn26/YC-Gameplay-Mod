@@ -1,40 +1,45 @@
 ﻿using System;
 using System.Collections.Generic;
 
+using BaseMod.Core;
 using BaseMod.Core.Extensions;
-using BaseMod.Core.Logger;
 using BaseMod.Core.Utils;
 
 using Il2Cpp;
 
+using MelonLoader;
+
 using UnityEngine;
 
-using YC.EnemyRandomizerMod.Configs;
 using YC.EnemyRandomizerMod.Models;
 
 namespace YC.EnemyRandomizerMod.Mods;
 public class EnemyBodyRandomizerMod {
     #region Configuration
-    internal static bool Enabled;
-    internal static bool RandomizeCompanions;
-    internal static int ChanceForFuta;
-    internal static int ChanceForFullFuta;
+    internal static MelonPreferences_Entry<bool> Enabled;
+    internal static MelonPreferences_Entry<bool> RandomizeCompanions;
+    internal static MelonPreferences_Entry<int> ChanceForFuta;
+    internal static MelonPreferences_Entry<int> ChanceForFullFuta;
     #endregion
 
     #region States
-    internal static bool IsModActive => Enabled;
+    internal static bool IsModActive => Enabled.Value;
     #endregion
 
     #region Storage
     public static CharacterDataa Character => CharacterDataa.Instance;
     #endregion
 
-    public static void Load(ModConfig config) {
+    public static void Load(PluginConfig config) {
         try {
-            Enabled = config.EnemyBodyRandomizer.Enabled;
-            RandomizeCompanions = config.EnemyBodyRandomizer.RandomizeCompanions;
-            ChanceForFuta = config.EnemyBodyRandomizer.ChanceForFuta;
-            ChanceForFullFuta = config.EnemyBodyRandomizer.ChanceForFullFuta;
+            Enabled = config.Entry(nameof(EnemyBodyRandomizerMod), nameof(Enabled), false, 
+                "Activates the modification", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            RandomizeCompanions = config.Entry(nameof(EnemyBodyRandomizerMod), nameof(RandomizeCompanions), false, 
+                "Randomize player companions", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            ChanceForFuta = config.Entry(nameof(EnemyBodyRandomizerMod), nameof(ChanceForFuta), 35, 
+                "Chance for female character with active or mixed role become futanari", new PluginConfig.AcceptableValueRange<int>(0, 100));
+            ChanceForFullFuta = config.Entry(nameof(EnemyBodyRandomizerMod), nameof(ChanceForFullFuta), 50, 
+                "Chance for female futa character get full futa (dick + balls)", new PluginConfig.AcceptableValueRange<int>(0, 100));
 
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
@@ -43,13 +48,13 @@ public class EnemyBodyRandomizerMod {
 
     public static void Apply(CombatEnemyManager combatEnemyManager, CharacterSex characterSex, Wardrobe wardrobe) {
         try {
-            if (!Enabled)
+            if (!Enabled.Value)
                 return;
 
             if (Character.adultSettingsDATA.EREnabled || wardrobe.enemyData is null)
                 return;
 
-            if (combatEnemyManager.requiredAllies.Contains(characterSex.characterName) && !RandomizeCompanions) {
+            if (combatEnemyManager.requiredAllies.Contains(characterSex.characterName) && !RandomizeCompanions.Value) {
                 SetEnemyDickType(wardrobe, characterSex);
                 CheckHat(wardrobe);
                 return;
@@ -1078,10 +1083,10 @@ public class EnemyBodyRandomizerMod {
         if (wardrobe2 is null)
             return;
 
-        if (RandomUtils.Chance(ChanceForFuta )) {
+        if (RandomUtils.Chance(ChanceForFuta.Value)) {
             Plugin.Log.Info($"{characterSex.characterName} will use a dick");
 
-            wardrobe.SkinDick.sharedMesh = RandomUtils.Chance(ChanceForFullFuta ) ? wardrobe2.DickMesh : wardrobe2.DickHalfMesh;
+            wardrobe.SkinDick.sharedMesh = RandomUtils.Chance(ChanceForFullFuta.Value) ? wardrobe2.DickMesh : wardrobe2.DickHalfMesh;
             Material material = characterSex.IsMale ? UnityEngine.Object.Instantiate(wardrobe2.DickMatM) : UnityEngine.Object.Instantiate(wardrobe2.DickMatF);
             wardrobe.SkinDick.sharedMaterial = material;
             var color = wardrobe.SkinCharacter.material.GetColor("_Albedo_Tint");
@@ -1098,7 +1103,7 @@ public class EnemyBodyRandomizerMod {
     }
 
     public static void SetFutaState(CharacterSex characterSex, Wardrobe wardrobe) {
-        if (!Enabled)
+        if (!Enabled.Value)
             return;
 
         if (Character.adultSettingsDATA.EREnabled)

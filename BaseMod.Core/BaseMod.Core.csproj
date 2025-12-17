@@ -35,6 +35,8 @@
 		</Reference>
 	</ItemDefinitionGroup>
 	<ItemGroup>
+		<PackageReference Include="LavaGang.MelonLoader" Version="0.7.1" />
+		
 		<Reference Include="Il2CppInterop.Runtime">
 			<HintPath>..\Libs\Il2CppInterop.Runtime.dll</HintPath>
 		</Reference>

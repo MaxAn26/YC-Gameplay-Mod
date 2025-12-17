@@ -1,8 +1,8 @@
-﻿using System;
-
-using HarmonyLib;
+﻿using HarmonyLib;
 
 using Il2Cpp;
+
+using UnityEngine;
 
 using YC.GameplayMod.Mods;
 
@@ -14,7 +14,7 @@ internal class BattleManagerPatch {
                 return false;
 
             return true;
-        } catch (Exception) {
+        } catch (System.Exception) {
             Plugin.Log.Warn($"{nameof(BattleManagerPatch)} not applied due exeption");
             return false;
         }
@@ -54,10 +54,13 @@ internal class BattleManagerPatch {
             __result = newSexId;
     }
 
-    [HarmonyPostfix]
+    [HarmonyPrefix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.AssistAlly))]
-    static void BattleManagerAssistAllyPostfix(CombatAction __0, int __1) {
+    static void BattleManagerAssistAllyPrefix(CombatAction __0, int __1) {
+        if (__0 is not null)
+            GameFixMod.AssistAllyFix(__0);
+
         Plugin.Log.Info($"Assist Ally {__0.actionName} '{__0.caster.characterSex.characterName}' -> '{__0.target.characterSex.characterName}': Slot: {__1}");
     }
 }

@@ -114,4 +114,28 @@ internal static class UnloadService {
             Plugin.Log.Error(ex.Message);
         }
     }
+
+    internal static void UnloadCombatEnemyPassives() {
+        try {
+            List<CombatEnemyPassiveItem> passivesList = [];
+            Plugin.Log.Info("Try find CombatEnemyPassive in Resources");
+            var passivesObj = Resources.FindObjectsOfTypeAll( Il2CppType.From( typeof(CombatEnemyPassive) ) );
+            foreach (var passiveObj in passivesObj) {
+                var action = passiveObj.TryCast<CombatEnemyPassive>();
+                if (action is not null) {
+                    var item = CombatEnemyPassiveItem.FromCombatTalent( action );
+                    passivesList.Add(item);
+                }
+            }
+
+            Plugin.Log.Info($"Prepared {passivesList.Count}/{passivesObj.Count} CombatEnemyPassive items");
+            if (JsonUtils.TrySerialize(Plugin.PluginResources, "CombatEnemyPassive.json", passivesList, false)) {
+                Plugin.Log.Info($"CombatEnemyPassive.json was created in {Plugin.PluginResources}");
+            } else {
+                Plugin.Log.Info("CombatEnemyPassive.json was NOT created");
+            }
+        } catch (Exception ex) {
+            Plugin.Log.Error(ex.Message);
+        }
+    }
 }

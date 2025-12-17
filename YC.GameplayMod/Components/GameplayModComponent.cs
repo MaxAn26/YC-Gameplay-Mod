@@ -58,6 +58,10 @@ public class GameplayModComponent : MonoBehaviour {
             if (!_sexInteractionSet) {
                 CumsCount++;
                 _sexInteractionSet = true;
+
+                if (CharacterDataa.Instance.adultSettingsDATA.messyMakeup && CumsCount >= 2) {
+                    Sex.SetMessyMakeup();
+                }
             }
         } else {
             _sexInteractionSet = false;

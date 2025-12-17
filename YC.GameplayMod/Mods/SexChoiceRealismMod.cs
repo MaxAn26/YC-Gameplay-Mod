@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using BaseMod.Core;
 using BaseMod.Core.Extensions;
 using BaseMod.Core.Utils;
 
@@ -10,23 +11,24 @@ using Il2Cpp;
 
 using Il2CppInterop.Runtime;
 
+using MelonLoader;
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 using YC.GameplayMod.Components;
-using YC.GameplayMod.Configs;
 using YC.GameplayMod.Models;
 
 namespace YC.GameplayMod.Mods;
 internal class SexChoiceRealismMod {
     #region Configuration
-    internal static bool Enabled;
-    internal static bool UpdateMoves;
-    internal static bool UsePlayerPreferredPositions;
+    internal static MelonPreferences_Entry<bool> Enabled;
+    internal static MelonPreferences_Entry<bool> UpdateMoves;
+    internal static MelonPreferences_Entry<bool> UsePlayerPreferredPositions;
     #endregion
 
     #region States
-    internal static bool IsModActive => Enabled;
+    internal static bool IsModActive => Enabled.Value;
     internal static List<SexMoveExtended> SexMoves { get; set; } = [];
     internal static List<PersonalitySexTags> PersonalitySexTypes { get; set; } = [];
     #endregion
@@ -37,12 +39,14 @@ internal class SexChoiceRealismMod {
     internal static SexMoveExtended LastMove;
     #endregion
 
-    internal static void Load(ModConfig config) {
+    internal static void Load(PluginConfig config) {
         try {
-            Enabled = config.SexChoiceRealism.Enabled;
-            UpdateMoves = config.SexChoiceRealism.UpdateMoves;
-            UsePlayerPreferredPositions = config.SexChoiceRealism.UsePlayerPreferredPositions;
-
+            Enabled = config.Entry(nameof(SexChoiceRealismMod), nameof(Enabled), false, 
+                "Activates the modification", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            UpdateMoves = config.Entry(nameof(SexChoiceRealismMod), nameof(UpdateMoves), false, 
+                "Update SexMove.json", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            UsePlayerPreferredPositions = config.Entry(nameof(SexChoiceRealismMod), nameof(UsePlayerPreferredPositions), false, 
+                "ONLY use preferred positions", new PluginConfig.AcceptableValueList<bool>([true, false]));
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
         }
@@ -66,13 +70,16 @@ internal class SexChoiceRealismMod {
                 } else {
                     Plugin.Log.Info($"SexMoves.json was not created");
                 }
-            } else if (UpdateMoves) {
+            } else if (UpdateMoves.Value) {
                 List<SexMoveExtended> poses = GetSexMoves();
+                List<int> newPoses = [];
                 foreach (var item in poses) {
                     var move = extendedSexMoves.FirstOrDefault(p => p.ID == item.ID);
                     if (move is null)
-                        if (!extendedSexMoves.Contains(item))
+                        if (!extendedSexMoves.Contains(item)){
                             extendedSexMoves.Add(item);
+                            newPoses.Add(item.ID);
+                        }
                         else
                             move.Update(item);
                 }
@@ -82,10 +89,11 @@ internal class SexChoiceRealismMod {
                 if (JsonUtils.TrySerialize(Plugin.PluginResources, "SexMoves.json", extendedSexMoves)) {
                     Plugin.Log.Info($"SexMoves.json was updated in {Plugin.PluginResources}");
                     File.WriteAllText($"{Plugin.PluginResources}/KnownIds.txt", string.Join(", ", extendedSexMoves.Select(m => m.ID)));
+                    File.WriteAllText($"{Plugin.PluginResources}/NewIds.txt", string.Join(", ", newPoses));
                 } else {
                     Plugin.Log.Info($"SexMoves.json was not updated");
                 }
-                UpdateMoves = false;
+                UpdateMoves.Value = false;
             }
 
             if (extendedSexMoves.Count > 0)
@@ -107,9 +115,9 @@ internal class SexChoiceRealismMod {
     }
 
     internal static int GetSexId(CharacterSex casterSex, CharacterSex targetSex, CharacterSex assistSex = null) {
-        if (!Enabled || SceneManager.GetActiveScene().buildIndex < 2) {
+        if (!Enabled.Value || SceneManager.GetActiveScene().buildIndex < 2) {
             Plugin.Log.Info("Exit due execute condition");
-            return -1; //-1
+            return -1;
         }
 
         if (casterSex is null || targetSex is null) {
@@ -166,124 +174,8 @@ internal class SexChoiceRealismMod {
         var move = ChooseWeightedRandom(sexMoves);
         LastMove = move;
 
+        Plugin.Log.Info($"SexID: {move?.ID ?? -1}; Caster role: {(casterSex.IsActive ? "Active" : "Passive")}; Target role: {(casterSex.IsActive ? "Active" : "Passive")}");
         return move is not null ? move.ID : -1;
-    }
-
-    internal static bool JoinThreesomeFix(SexEncounter sexEncounter, CharacterAttributes joinedCharacter, int oldSexID) {
-        try {
-            if (joinedCharacter == null) { return false; }
-
-            CharacterSex casterSex          = sexEncounter.CasterSex;
-            CharacterSex currentCasterSex   = sexEncounter.CasterSex;
-            CharacterSex targetSex          = sexEncounter.TargetSex;
-            CharacterSex currentTargetSex   = sexEncounter.TargetSex;
-            CharacterSex assistSex          = joinedCharacter.characterSex;
-            CharacterSex currentAssistSex   = joinedCharacter.characterSex;
-
-            if (assistSex.IsPlayer) {
-                Plugin.Log.Debug($"Player join to Threesome");
-                SexEncounter.print($"Player join to Threesome");
-                if (casterSex.characterAttributes.combatAI.isAlly && !casterSex.characterAttributes.CheckForStatus("Charmed")) {
-                    casterSex = currentAssistSex;
-                    targetSex = currentTargetSex;
-                    assistSex = currentCasterSex;
-                } else {
-                    casterSex = currentAssistSex;
-                    targetSex = currentCasterSex;
-                    assistSex = currentTargetSex;
-                }
-
-                if (CharacterDataa.Instance.currentState == CharacterDataa.BattleState.Fucking) {
-                    sexEncounter.battleManager.combatUIManager.EnableSexfightUI();
-                } else {
-                    sexEncounter.battleManager.combatUIManager.DisableSexfightUI();
-                }
-            } else if (assistSex.characterAttributes.combatAI.isAlly) {
-                Plugin.Log.Debug($"Ally join to Threesome");
-                SexEncounter.print($"Ally join to Threesome");
-                if (targetSex.IsPlayer) {
-                    casterSex = currentTargetSex;
-                    targetSex = currentCasterSex;
-                    assistSex = currentAssistSex;
-                } else if (targetSex.characterAttributes.combatAI.isAlly) {
-                    casterSex = currentAssistSex;
-                    targetSex = currentCasterSex;
-                    assistSex = currentTargetSex;
-                } else {
-                    casterSex = currentCasterSex;
-                    targetSex = currentTargetSex;
-                    assistSex = currentAssistSex;
-                }
-            } else if (assistSex.characterAttributes.combatAI.isElite) {
-                Plugin.Log.Debug($"Elite enemy join to Threesome");
-                SexEncounter.print($"Elite enemy join to Threesome");
-                if (casterSex.IsPlayer || casterSex.characterAttributes.combatAI.isAlly) {
-                    casterSex = currentAssistSex;
-                    targetSex = currentCasterSex;
-                    assistSex = currentTargetSex;
-                } else {
-                    casterSex = currentAssistSex;
-                    targetSex = currentTargetSex;
-                    assistSex = currentCasterSex;
-                }
-            } else {
-                Plugin.Log.Debug($"Enemy join to Threesome");
-                SexEncounter.print($"Enemy join to Threesome");
-                if (casterSex.IsPlayer || casterSex.characterAttributes.combatAI.isAlly) {
-                    casterSex = currentTargetSex;
-                    targetSex = currentCasterSex;
-                    assistSex = currentAssistSex;
-                } else {
-                    casterSex = currentCasterSex;
-                    targetSex = currentTargetSex;
-                    assistSex = currentAssistSex;
-                }
-            }
-
-            assistSex.currentSexEncounter = sexEncounter;
-            casterSex.currentSexEncounter = sexEncounter;
-            targetSex.currentSexEncounter = sexEncounter;
-
-            sexEncounter.Assist = assistSex.gameObject;
-            sexEncounter.AssistSex = assistSex;
-            sexEncounter.AssistAnim = assistSex.GetComponent<Animator>();
-            sexEncounter.AssistAttributes = assistSex.characterAttributes;
-            sexEncounter.AssistMale = assistSex.IsMale;
-            sexEncounter.AssistActive = assistSex.IsActive;
-            sexEncounter.AssistFuta = assistSex.IsFuta;
-
-            sexEncounter.Caster = casterSex.gameObject;
-            sexEncounter.CasterSex = casterSex;
-            sexEncounter.CasterAnim = casterSex.GetComponent<Animator>();
-            sexEncounter.CasterAttributes = casterSex.characterAttributes;
-            sexEncounter.CasterMale = casterSex.IsMale;
-            sexEncounter.CasterActive = casterSex.IsActive;
-            sexEncounter.CasterFuta = casterSex.IsFuta;
-
-            sexEncounter.Target = targetSex.gameObject;
-            sexEncounter.TargetSex = targetSex;
-            sexEncounter.TargetAnim = targetSex.GetComponent<Animator>();
-            sexEncounter.TargetAttributes = targetSex.characterAttributes;
-            sexEncounter.TargetMale = targetSex.IsMale;
-            sexEncounter.TargetActive = targetSex.IsActive;
-            sexEncounter.TargetFuta = targetSex.IsFuta;
-
-            sexEncounter.IsThreesome = true;
-            sexEncounter.ThreesomeIsCasterFriend = true;
-            sexEncounter.CasterIsAttacker = true;
-
-            int newSexId = GetSexId(sexEncounter.CasterSex, targetSex, assistSex);
-            if (newSexId > 0)
-                oldSexID = newSexId;
-
-            sexEncounter.SexID = oldSexID;
-            sexEncounter.StartThreesome();
-
-            return true;
-        } catch (Exception ex) {
-            Plugin.Log.Error(ex.Message);
-            return false;
-        }
     }
 
     private static List<SexMoveExtended> GetSexMoves() {
@@ -477,7 +369,7 @@ internal class SexChoiceRealismMod {
                 continue;
 
             int score = 0;
-            if (casterSex.IsPlayer && UsePlayerPreferredPositions) {
+            if (casterSex.IsPlayer && UsePlayerPreferredPositions.Value) {
                 if (!Character.statusDATA.PreferredSex.Contains(sexMove.ID))
                     continue;
 

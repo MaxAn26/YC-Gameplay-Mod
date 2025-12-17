@@ -10,7 +10,7 @@ namespace YC.GameplayMod.Patches;
 internal class SexEncounterPatch {
     internal static bool Prepare() {
         try {
-            if (!SexChoiceRealismMod.IsModActive && !DickStraponVisibilityMod.IsModActive)
+            if (!SexChoiceRealismMod.IsModActive && !DickStraponVisibilityMod.IsModActive && !GameFixMod.IsModActive)
                 return false;
 
             return true;
@@ -58,7 +58,7 @@ internal class SexEncounterPatch {
         if (!__runOriginal)
             return false;
 
-        if (SexChoiceRealismMod.JoinThreesomeFix(__instance, __0, __1))
+        if (GameFixMod.JoinThreesomeFix(__instance, __0, __1))
             return false;
 
         return true;

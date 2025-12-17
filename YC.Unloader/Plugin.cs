@@ -33,6 +33,7 @@ public class Plugin : MelonMod {
             UnloadService.UnloadCombatActions();
             UnloadService.UnloadCombatBuffs();
             UnloadService.UnloadCombatTalents();
+            UnloadService.UnloadCombatEnemyPassives();
         }
 
         base.OnSceneWasLoaded(buildIndex, sceneName);
