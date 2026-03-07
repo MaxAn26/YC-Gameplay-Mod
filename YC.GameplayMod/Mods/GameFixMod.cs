@@ -29,6 +29,7 @@ internal class GameFixMod {
             JoinThreesome = config.Entry(nameof(GameFixMod), nameof(JoinThreesome), false,
                 "Extend Join threesome", new PluginConfig.AcceptableValueList<bool>([true, false]));
 
+
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
         }
@@ -156,7 +157,7 @@ internal class GameFixMod {
         }
     }
 
-    public static void AssistAllyFix(CombatAction combatAction) {
+    public static void AssistAllyFix(ref CombatAction combatAction) {
         if (!Enabled.Value || !AssistAlly.Value)
             return;
 
@@ -169,56 +170,68 @@ internal class GameFixMod {
             return;
 
         CharacterAttributes player = combatAction.target;
-        CharacterAttributes otherAlly = null;
+        CharacterAttributes companion = null;
         if (battleManager.Ally1Exists && combatAction.caster != battleManager.characterAlly1)
-            otherAlly = battleManager.characterAlly1;
+            companion = battleManager.characterAlly1;
         else if (battleManager.Ally2Exists && combatAction.caster != battleManager.characterAlly2)
-            otherAlly = battleManager.characterAlly1;
+            companion = battleManager.characterAlly2;
 
-        if (otherAlly is null)
+        if (companion is null)
             return;
 
-        if (!player.isGrappled && !otherAlly.isGrappled) {
-            if (IsBound( player ))
-                combatAction.target = player;
-            else if (IsBound(otherAlly))
-                combatAction.target = otherAlly;
-            else if (player.currentHealth / player.maxHealth > otherAlly.currentHealth / otherAlly.maxHealth)
-                combatAction.target = otherAlly;
-            else if (combatBuffsManager.GetNumberOfStacksOnCharacteR( player, "Resolute cheer") > combatBuffsManager.GetNumberOfStacksOnCharacteR(otherAlly, "Resolute cheer"))
-                combatAction.target = otherAlly;
-        }
-        else if (player.isGrappled && !otherAlly.isGrappled) {
-            if (combatBuffsManager.GetNumberOfStacksOnCharacteR(player, "Battle cheer") >= 4)
-                combatAction.target = otherAlly;
-        } else if (!player.isGrappled && otherAlly.isGrappled) {
-            if (player.currentHealth > player.maxHealth * 0.6 && combatBuffsManager.GetNumberOfStacksOnCharacteR(otherAlly, "Battle cheer") < 4)
-                combatAction.target = otherAlly;
-        }else {
-            if (combatBuffsManager.GetNumberOfStacksOnCharacteR(otherAlly, "Battle cheer") < 4)
-                combatAction.target = otherAlly;
-        }
+        int playerWeight = 0;
+        int companionWeight = 0;
 
-        static bool IsBound(CharacterAttributes characterAttributes) {
+        playerWeight += BoundsCount(player);
+        companionWeight += BoundsCount(companion);
+
+        playerWeight += player.isGrappled ? 1 : 0;
+        companionWeight *= companion.isGrappled ? 1 : 0;
+
+        playerWeight -= combatBuffsManager.GetNumberOfStacksOnCharacteR(player, "Resolute cheer");
+        companionWeight -= combatBuffsManager.GetNumberOfStacksOnCharacteR(companion, "Resolute cheer");
+
+        playerWeight -= combatBuffsManager.GetNumberOfStacksOnCharacteR(player, "Battle cheer");
+        companionWeight -= combatBuffsManager.GetNumberOfStacksOnCharacteR(companion, "Battle cheer");
+
+        playerWeight = Math.Max(playerWeight, 0);
+        companionWeight = Math.Max(companionWeight, 0);
+
+        playerWeight += (int)((1f - (float)player.currentHealth / player.maxHealth) * 10);
+        companionWeight += (int)((1f - (float)companion.currentHealth / companion.maxHealth) * 10);
+
+        if (player.currentPleasure > 0)
+            playerWeight += Math.Max((int)((player.currentPleasure / 10000f) * 10), 1);
+
+        if (companion.currentPleasure > 0)
+            companionWeight += Math.Max((int)((companion.currentPleasure / 10000f) * 10), 1);
+
+        Plugin.Log.Debug( $"AssistAllyFix weights: Player: {playerWeight}, Companion: {companionWeight}" );
+
+        if (companionWeight >= playerWeight)
+            combatAction.target = companion;
+
+        static int BoundsCount(CharacterAttributes characterAttributes) {
             if (characterAttributes.characterSex.restraintsWearing == 0)
-                return false;
+                return 0;
 
+            int res = 0;
             if (characterAttributes.characterSex.IsBoundHeavyRestraint > 0)
-                return true;
+                res += 1;
 
             if (characterAttributes.characterSex.IsBoundHandRestraint > 0)
-                return true;
+                res += 1;
 
             if (characterAttributes.characterSex.IsBoundLegRestraint > 0)
-                return true;
+                res += 1;
 
             if (characterAttributes.characterSex.IsBoundBlindfold > 0)
-                return true;
+                res += 1;
 
             if (characterAttributes.characterSex.IsBoundGag > 0)
-                return true;
+                res += 1;
 
-            return false;
+            return res;
         }
     }
 }

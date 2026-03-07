@@ -15,6 +15,7 @@ public class PluginConfig {
         if (!_categories.TryGetValue(categoryName, out MelonPreferences_Category category)){
             category = MelonPreferences.CreateCategory(categoryName);
             category.SetFilePath(Path.Combine(MelonEnvironment.UserDataDirectory, _filename));
+            category.LoadFromFile();
             _categories.Add(categoryName, category);
         }
 
@@ -22,6 +23,12 @@ public class PluginConfig {
             description = $"{description} ({validator.AdditionalMessage})";
 
         return category.CreateEntry(entryName, defaultValue, description: description, validator: validator);
+    }
+
+    public void Save() {
+        foreach ( var category in _categories.Values ) {
+            category.SaveToFile();
+        }
     }
 
     public abstract class AcceptableValue : ValueValidator {

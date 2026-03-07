@@ -47,6 +47,9 @@ internal class SexChoiceRealismMod {
                 "Update SexMove.json", new PluginConfig.AcceptableValueList<bool>([true, false]));
             UsePlayerPreferredPositions = config.Entry(nameof(SexChoiceRealismMod), nameof(UsePlayerPreferredPositions), false, 
                 "ONLY use preferred positions", new PluginConfig.AcceptableValueList<bool>([true, false]));
+
+
+            Plugin.Log.Debug($"{(Enabled.Value ? "Yes" : "No")}");
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
         }

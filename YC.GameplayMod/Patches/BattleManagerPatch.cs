@@ -57,10 +57,23 @@ internal class BattleManagerPatch {
     [HarmonyPrefix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.AssistAlly))]
-    static void BattleManagerAssistAllyPrefix(CombatAction __0, int __1) {
-        if (__0 is not null)
-            GameFixMod.AssistAllyFix(__0);
+    static void BattleManagerAssistAllyPrefix(ref CombatAction __0, int __1) {
+        if (__0 is not null) {
+            GameFixMod.AssistAllyFix(ref __0);
+        }
 
         Plugin.Log.Info($"Assist Ally {__0.actionName} '{__0.caster.characterSex.characterName}' -> '{__0.target.characterSex.characterName}': Slot: {__1}");
+    }
+
+    [HarmonyPrefix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.PrepareAction))]
+    static bool BattleManagerPrepareActionPrefix(BattleManager __instance, bool __runOriginal, ref CombatAction __0) {
+        Plugin.Log.Debug($"Action: {__0.actionName}");
+
+        if (!__runOriginal)
+            return false;
+
+        return true;
     }
 }

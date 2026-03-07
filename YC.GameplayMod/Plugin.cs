@@ -16,6 +16,7 @@ using YC.GameplayMod.Patches;
 namespace YC.GameplayMod;
 public class Plugin : MelonMod {
     internal static IPluginLogger Log;
+    internal static PluginConfig PluginConfig;
     internal static string ConfigPath;
     internal static string PluginAssets;
     internal static string PluginConfigs;
@@ -31,12 +32,12 @@ public class Plugin : MelonMod {
         PluginConfigs   = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Configs");
         PluginResources = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Resources");
 
-        PluginConfig config = new($"{MyPluginInfo.PLUGIN_GUID}.cfg");
+        PluginConfig = new($"{MyPluginInfo.PLUGIN_GUID}.cfg");
 
-        DickStraponVisibilityMod.Load(config);
-        GameFixMod.Load(config);
-        RandomReverseMod.Load(config);
-        SexChoiceRealismMod.Load(config);
+        DickStraponVisibilityMod.Load(PluginConfig);
+        GameFixMod.Load(PluginConfig);
+        RandomReverseMod.Load(PluginConfig);
+        SexChoiceRealismMod.Load(PluginConfig);
 
         HarmonyInstance.PatchAll(typeof(BattleManagerPatch));
         HarmonyInstance.PatchAll(typeof(CharacterSexPatch));
@@ -56,6 +57,12 @@ public class Plugin : MelonMod {
         }
 
         base.OnSceneWasLoaded(buildIndex, sceneName);
+    }
+
+    public override void OnPreferencesSaved() {
+        PluginConfig?.Save();
+
+        base.OnPreferencesSaved();
     }
 }
 /*
