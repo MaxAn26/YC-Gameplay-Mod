@@ -4,11 +4,15 @@ using HarmonyLib;
 
 using Il2Cpp;
 
+using YC.GameplayMod.Components;
+using YC.GameplayMod.Mods;
+
 namespace YC.GameplayMod.Patches;
 internal class CharacterAttributesPatch {
     internal static bool Prepare() {
         try {
-
+            if (!SexChoiceRealismMod.IsModActive)
+                return false;
 
             return true;
         } catch (Exception) {
@@ -19,15 +23,17 @@ internal class CharacterAttributesPatch {
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.SetupSexPositions))]
-    static void CharacterAttributesSetupSexPositionsPostfix(CharacterAttributes __instance) {
-        Plugin.Log.Info($"Setup Sex Positions for '{__instance.characterSex.characterName}'");
+    [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.Initialize))]
+    [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.InitializeAlly))]
+    static void CharacterAttributesInitializePostfix(CharacterAttributes __instance) {
+        if (!string.IsNullOrWhiteSpace(__instance.characterSex.characterName))
+            GameplayModComponent.RegisterClass(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.Death))]
-    static void CharacterAttributesDeathPostfix(CharacterAttributes __instance) {
-        CharacterAttributes.print($"{__instance.characterName} is DEAD");
+    [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.Rest))]
+    static void CharacterAttributesRestPostfix(CharacterAttributes __instance) {
+        SexChoiceRealismMod.ResetSexCount( __instance );
     }
 }
