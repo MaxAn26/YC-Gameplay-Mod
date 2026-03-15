@@ -23,6 +23,9 @@ namespace YC.GameplayMod.Mods;
 internal class SexChoiceRealismMod {
     #region Configuration
     internal static MelonPreferences_Entry<bool> Enabled;
+    internal static MelonPreferences_Entry<bool> RandomPersonalityAlly;
+    internal static MelonPreferences_Entry<bool> RandomPersonalityElite;
+    internal static MelonPreferences_Entry<bool> RandomPersonalityEnemy;
     internal static MelonPreferences_Entry<bool> UpdateMoves;
     internal static MelonPreferences_Entry<bool> UsePlayerPreferredPositions;
     #endregion
@@ -37,19 +40,25 @@ internal class SexChoiceRealismMod {
     internal static CharacterDataa Character => CharacterDataa.Instance;
     internal static SexSystem SexSystem;
     internal static SexMoveExtended LastMove;
+    internal static IList<SexTag> AllSexTags;
     #endregion
 
     internal static void Load(PluginConfig config) {
         try {
             Enabled = config.Entry(nameof(SexChoiceRealismMod), nameof(Enabled), false, 
                 "Activates the modification", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            RandomPersonalityAlly = config.Entry(nameof(SexChoiceRealismMod), nameof(RandomPersonalityAlly), false,
+                "Player companions will take random sex personality", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            RandomPersonalityElite = config.Entry(nameof(SexChoiceRealismMod), nameof(RandomPersonalityElite), false,
+                "Elite enemies will take random sex personality", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            RandomPersonalityEnemy = config.Entry(nameof(SexChoiceRealismMod), nameof(RandomPersonalityEnemy), false,
+                "Non-Elite enemies will take random sex personality", new PluginConfig.AcceptableValueList<bool>([true, false]));
             UpdateMoves = config.Entry(nameof(SexChoiceRealismMod), nameof(UpdateMoves), false, 
                 "Update SexMove.json", new PluginConfig.AcceptableValueList<bool>([true, false]));
             UsePlayerPreferredPositions = config.Entry(nameof(SexChoiceRealismMod), nameof(UsePlayerPreferredPositions), false, 
                 "ONLY use preferred positions", new PluginConfig.AcceptableValueList<bool>([true, false]));
 
-
-            Plugin.Log.Debug($"{(Enabled.Value ? "Yes" : "No")}");
+            AllSexTags = (IList<SexTag>)Enum.GetValues(typeof(SexTag));
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
         }
@@ -78,13 +87,14 @@ internal class SexChoiceRealismMod {
                 List<int> newPoses = [];
                 foreach (var item in poses) {
                     var move = extendedSexMoves.FirstOrDefault(p => p.ID == item.ID);
-                    if (move is null)
-                        if (!extendedSexMoves.Contains(item)){
+                    if (move is null) {
+                        if (!extendedSexMoves.Contains(item)) {
                             extendedSexMoves.Add(item);
                             newPoses.Add(item.ID);
-                        }
-                        else
+                        } else {
                             move.Update(item);
+                        }
+                    }
                 }
 
                 extendedSexMoves.Sort();
@@ -181,6 +191,13 @@ internal class SexChoiceRealismMod {
         return move is not null ? move.ID : -1;
     }
 
+    internal static void ResetSexCount( CharacterAttributes characterAttributes ) {
+        if (characterAttributes.gameObject.TryGetComponentWithCast(out GameplayModComponent modComponent)) {
+            modComponent.CumsCount = 0;
+            modComponent.SexCount = 0;
+        }
+    }
+
     private static List<SexMoveExtended> GetSexMoves() {
         Plugin.Log.Info("Creating SexMoves.json...");
         List<SexMoveExtended> poses = [];
@@ -226,49 +243,90 @@ internal class SexChoiceRealismMod {
         personalitySexTypes.Add(new PersonalitySexTags() {
             Id = 1,
             Name = "Balanced",
-            PreferredTags = SexTag.Universal | SexTag.Sensual | SexTag.Service,
-            NeutralTags = SexTag.Spanking | SexTag.Dominant,
-            AvoidTags = SexTag.Smothering | SexTag.Wresting
+            Perform = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Universal | SexTag.Sensual,
+                NeutralTags = SexTag.Service | SexTag.Wresting,
+                AvoidTags = SexTag.Rough | SexTag.Smothering | SexTag.Spanking
+            },
+            Command = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Sensual | SexTag.Universal,
+                NeutralTags = SexTag.Dominant | SexTag.Service,
+                AvoidTags = SexTag.Rough | SexTag.Smothering | SexTag.Spanking
+            }
         });
         personalitySexTypes.Add(new PersonalitySexTags() {
             Id = 2,
             Name = "Dominant",
-            PreferredTags = SexTag.Dominant | SexTag.Spanking | SexTag.Smothering | SexTag.Wresting,
-            NeutralTags = SexTag.Sensual | SexTag.Universal,
-            AvoidTags = SexTag.Service
+            Perform = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Dominant | SexTag.Rough | SexTag.Smothering | SexTag.Spanking,
+                NeutralTags = SexTag.Universal | SexTag.Wresting,
+                AvoidTags = SexTag.Service | SexTag.Sensual
+            },
+            Command = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Wresting,
+                NeutralTags = SexTag.Rough | SexTag.Sensual | SexTag.Universal,
+                AvoidTags = SexTag.Smothering | SexTag.Spanking | SexTag.Service
+            }
         });
         personalitySexTypes.Add(new PersonalitySexTags() {
             Id = 3,
             Name = "Defensive",
-            PreferredTags = SexTag.Service | SexTag.Sensual | SexTag.Universal,
-            NeutralTags = SexTag.Smothering,
-            AvoidTags = SexTag.Dominant | SexTag.Wresting | SexTag.Spanking
+            Perform = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Sensual | SexTag.Service,
+                NeutralTags = SexTag.Universal,
+                AvoidTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking | SexTag.Smothering | SexTag.Wresting
+            },
+            Command = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Sensual | SexTag.Service,
+                NeutralTags = SexTag.Universal,
+                AvoidTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking | SexTag.Smothering
+            }
         });
         personalitySexTypes.Add(new PersonalitySexTags() {
             Id = 4,
             Name = "Passionate",
-            PreferredTags = SexTag.Sensual | SexTag.Dominant | SexTag.Spanking | SexTag.Smothering,
-            NeutralTags = SexTag.Universal,
-            AvoidTags = SexTag.Service | SexTag.Wresting
+            Perform = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Rough | SexTag.Sensual | SexTag.Wresting,
+                NeutralTags = SexTag.Dominant | SexTag.Universal,
+                AvoidTags = SexTag.Service
+            },
+            Command = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Dominant | SexTag.Rough | SexTag.Smothering,
+                NeutralTags = SexTag.Wresting | SexTag.Sensual,
+                AvoidTags = SexTag.Service
+            }
         });
         personalitySexTypes.Add(new PersonalitySexTags() {
             Id = 5,
             Name = "Submissive",
-            PreferredTags = SexTag.Service | SexTag.Sensual | SexTag.Universal,
-            NeutralTags = SexTag.Smothering,
-            AvoidTags = SexTag.Dominant | SexTag.Wresting | SexTag.Spanking
+            Perform = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Service,
+                NeutralTags = SexTag.Universal | SexTag.Sensual,
+                AvoidTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking | SexTag.Smothering | SexTag.Wresting
+            },
+            Command = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking | SexTag.Smothering,
+                NeutralTags = SexTag.Sensual,
+                AvoidTags = SexTag.Wresting
+            }
         });
         personalitySexTypes.Add(new PersonalitySexTags() {
             Id = 6,
             Name = "Trickster",
-            PreferredTags = SexTag.Wresting | SexTag.Smothering | SexTag.Spanking,
-            NeutralTags = SexTag.Dominant | SexTag.Service | SexTag.Sensual,
-            AvoidTags = SexTag.Universal
+            Perform = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Rough | SexTag.Smothering | SexTag.Wresting,
+                NeutralTags = SexTag.Universal | SexTag.Dominant | SexTag.Sensual,
+                AvoidTags = SexTag.Service
+            },
+            Command = new PersonalitySexTags.SexTags {
+                PreferredTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking,
+                NeutralTags = SexTag.Wresting | SexTag.Sensual,
+                AvoidTags = SexTag.Service
+            }
         });
 
         return personalitySexTypes;
     }
-
 
     private static CharacterStatus GetCharacterStatus(CharacterAttributes characterAttributes) {
         CharacterStatus status = CharacterStatus.None;
@@ -297,24 +355,22 @@ internal class SexChoiceRealismMod {
             int sexChance = 40;
             if (casterSex.gameObject.TryGetComponentWithCast(out GameplayModComponent casterComponent)
                 && targetSex.gameObject.TryGetComponentWithCast(out GameplayModComponent targetComponent)) {
-                int casterCumsInSuccession  = casterComponent.CumsCount;
-                int casterCurrentPleasure   = casterComponent.Attributes.currentPleasure;
-                int targetCumsInSuccession  = targetComponent.CumsCount;
-                int targetCurrentPleasure   = targetComponent.Attributes.currentPleasure;
+                int casterBonus = 0;
+                int targetBonus = 0;
 
-                int delta                   = casterCumsInSuccession - targetCumsInSuccession;
-                if (delta == 0)
-                    delta = casterCumsInSuccession;
+                casterBonus += casterComponent.CumsCount;
+                casterBonus += (casterComponent.SexCount - casterComponent.CumsCount) * 5;
+                casterBonus += (casterComponent.Attributes.currentPleasure <= 0 ? 0 : Math.Min(casterComponent.Attributes.currentPleasure / 2500, 1)) * 5;
+                casterBonus += casterStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
+                casterBonus -= casterStatus.HasFlag(CharacterStatus.Charmed) ? 3 : 0;
 
-                int baseChance              = Math.Abs(delta) * 10;
-                int casterBonus             = casterCumsInSuccession * 3;
-                int casterStatusBonus       = casterStatus.HasFlag(CharacterStatus.Aroused) || casterStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
-                int targetBonus             = targetCumsInSuccession * 5;
-                int targetStatusBonus       = targetStatus.HasFlag(CharacterStatus.Aroused) || targetStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
-                int plesureState            = Math.Min(casterCurrentPleasure, targetCurrentPleasure) / 2500;
-                int plesureBonus            = Convert.ToInt32(Math.Pow(5, plesureState));
+                targetBonus += targetComponent.CumsCount;
+                targetBonus += (targetComponent.SexCount - targetComponent.CumsCount) * 5;
+                targetBonus += (targetComponent.Attributes.currentPleasure <= 0 ? 0 : Math.Min(targetComponent.Attributes.currentPleasure / 2500, 1)) * 5;
+                targetBonus += targetStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
+                targetBonus += targetStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
 
-                sexChance = Math.Clamp(baseChance + plesureBonus + targetBonus + targetStatusBonus + casterStatusBonus - casterBonus, 5, 95);
+                sexChance = Math.Clamp(targetBonus + casterBonus, 5, 95);
             }
 
             PositionGroup group = RandomUtils.Chance(sexChance) ? PositionGroup.Sex : PositionGroup.Foreplay;
@@ -344,9 +400,9 @@ internal class SexChoiceRealismMod {
             ? assistSex.IsActive ? CharacterRole.Active : CharacterRole.Passive
             : CharacterRole.Any;
         
-        int personalityId = casterSex.IsPlayer
-            ? CharacterDataa.Instance.adultSettingsDATA.SexGameplayAI
-            : casterSex.characterAttributes.enemyData?.statsDATA.EnemyPersonality ?? 0;
+        int personalityId = casterSex.gameObject.TryGetComponentWithCast(out GameplayModComponent casterComponent)
+            ? casterComponent.PersonalityId
+            : 0;
         PersonalitySexTags sexType = PersonalitySexTypes.FirstOrDefault( t => t.Id == personalityId )?.UpdateByStatus(GetCharacterStatus(casterSex.characterAttributes));
 
         foreach (var sexMove in SexMoves) {
@@ -378,7 +434,7 @@ internal class SexChoiceRealismMod {
 
                 score = 1;
             } else {
-                score = GetPositionScore(sexMove.SexTags, sexType);
+                score = GetPositionScore(sexMove, sexType);
             }
 
             sexMoves.Add((sexMove, score));
@@ -418,41 +474,47 @@ internal class SexChoiceRealismMod {
         return false;
     }
 
-    private static int GetPositionScore(SexTag positionTags, PersonalitySexTags personality) {
+    private static int GetPositionScore(SexMoveExtended sexMove, PersonalitySexTags personality) {
         if (personality == null)
             return 1;
 
-        int preferredScore = 5;
-        int neutralScore = 2;
-        int avoidScore = 3;
-        bool hasFlags = false;
-        int score = 0;
+        int score           = 0;
+        int preferredScore  = 5;
+        int neutralScore    = 2;
+        int avoidScore      = -3;
 
-        foreach (SexTag tag in Enum.GetValues(typeof(SexTag))) {
+        foreach (SexTag tag in AllSexTags) {
             if (tag == SexTag.None)
                 continue;
 
-            if (!positionTags.HasFlag(tag))
+            if (!sexMove.SexTags.HasFlag(tag))
                 continue;
 
-            if (positionTags.HasFlag(tag)) {
-                if (personality.PreferredTags.HasFlag(tag)) {
-                    hasFlags = true;
-                    score += preferredScore;
-                } else if (personality.NeutralTags.HasFlag(tag)) {
-                    hasFlags = true;
-                    score += neutralScore;
-                } else if (personality.AvoidTags.HasFlag(tag)) {
-                    hasFlags = true;
-                    score -= avoidScore;
-                }
+            if (sexMove.IsPerform) {
+                score += GetWeight(tag, personality.Perform);
+            }
+            
+            if (sexMove.IsCommand) {
+                score += GetWeight(tag, personality.Command);
             }
         }
 
-        if (!hasFlags)
-            score = neutralScore;
+        if (sexMove.Equals(LastMove))
+            score /= 2;
 
-        return score;
+        return score == 0 ? 1 : Math.Max(score, 0);
+
+        int GetWeight(SexTag tag, PersonalitySexTags.SexTags personalityTags) {
+            if (personalityTags.PreferredTags.HasFlag(tag)) {
+                return RandomUtils.Int32(preferredScore - 1, preferredScore + 1);
+            } else if (personalityTags.NeutralTags.HasFlag(tag)) {
+                return RandomUtils.Int32(neutralScore - 1, neutralScore + 1);
+            } else if (personalityTags.AvoidTags.HasFlag(tag)) {
+                return RandomUtils.Int32(avoidScore - 1, avoidScore + 1);
+            }
+
+            return 0;
+        }
     }
 
     private static SexMoveExtended ChooseWeightedRandom(List<(SexMoveExtended move, int score)> moves) {

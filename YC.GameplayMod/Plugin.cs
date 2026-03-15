@@ -40,6 +40,7 @@ public class Plugin : MelonMod {
         SexChoiceRealismMod.Load(PluginConfig);
 
         HarmonyInstance.PatchAll(typeof(BattleManagerPatch));
+        HarmonyInstance.PatchAll(typeof(CharacterAttributesPatch));
         HarmonyInstance.PatchAll(typeof(CharacterSexPatch));
         HarmonyInstance.PatchAll(typeof(SexEncounterPatch));
 

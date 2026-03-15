@@ -1727,8 +1727,8 @@
     "ID": 221,
     "Name": "Submission spanking (Perform)",
     "Description": "Grab your partner, pin them to the ground and spank their butt",
-    "CasterGender": "Futa, Female",
-    "CasterRole": "Any",
+    "CasterGender": "Futa, Male",
+    "CasterRole": "Active",
     "TargetGender": "Any",
     "TargetRole": "Any",
     "IsCommand": false,
@@ -2181,7 +2181,7 @@
     "TargetRole": "Any",
     "IsCommand": false,
     "IsPerform": true,
-    "SexTags": "Universal"
+    "SexTags": "Rough, Universal"
   },
   {
     "IsDisabled": false,
