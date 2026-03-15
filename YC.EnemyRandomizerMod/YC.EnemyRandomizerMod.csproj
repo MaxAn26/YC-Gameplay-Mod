@@ -72,6 +72,7 @@
 		</ItemGroup>
 
 		<MakeDir Directories="$(SolutionDir)@Mods\Mods" />
+		<RemoveDir Directories="$(SolutionDir)@Mods\UserData\$(AssemblyName)" />
 		<MakeDir Directories="$(SolutionDir)@Mods\UserData\$(AssemblyName)" />
 		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SolutionDir)@Mods\Mods" />
 		<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(SolutionDir)@Mods\UserData\$(AssemblyName)\%(RecursiveDir)" />
@@ -88,6 +89,7 @@
 		</ItemGroup>
 
 		<MakeDir Directories="$(SolutionDir)@Release\$(AssemblyName)\Mods" />
+		<RemoveDir Directories="$(SolutionDir)@Mods\UserData\$(AssemblyName)" />
 		<MakeDir Directories="$(SolutionDir)@Release\$(AssemblyName)\UserData\$(AssemblyName)" />
 		<Copy SourceFiles="@(CopySource)" DestinationFolder="$(SolutionDir)@Release\$(AssemblyName)\Mods" />
 		<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(SolutionDir)@Release\$(AssemblyName)\UserData\$(AssemblyName)\%(RecursiveDir)" />

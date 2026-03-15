@@ -1129,12 +1129,6 @@ public class EnemyBodyRandomizerMod {
         }
     }
 
-    private static float Map(float value, float inMin, float inMax, float outMin, float outMax) {
-        return outMin + (Math.Clamp(value, inMin, inMax) - inMin) / (inMax - inMin) * (outMax - outMin);
-    }
-
-    private static float Lerp(float a, float b, float t) => a + (b - a) * t;
-
     private static float GetSkewedValue(float max) {
         float u = RandomUtils.Float(0.0f, 1.0f);       // [0, 1]
         float skewed = u * u;                          // смещает значения к 0
