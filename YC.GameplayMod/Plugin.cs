@@ -35,6 +35,7 @@ public class Plugin : MelonMod {
         PluginConfig = new($"{MyPluginInfo.PLUGIN_GUID}.cfg");
 
         DickStraponVisibilityMod.Load(PluginConfig);
+        EnemyBodyRandomizerMod.Load(PluginConfig);
         GameFixMod.Load(PluginConfig);
         RandomReverseMod.Load(PluginConfig);
         SexChoiceRealismMod.Load(PluginConfig);
@@ -42,6 +43,7 @@ public class Plugin : MelonMod {
         HarmonyInstance.PatchAll(typeof(BattleManagerPatch));
         HarmonyInstance.PatchAll(typeof(CharacterAttributesPatch));
         HarmonyInstance.PatchAll(typeof(CharacterSexPatch));
+        HarmonyInstance.PatchAll(typeof(CombatEnemyManagerPatch));
         HarmonyInstance.PatchAll(typeof(SexEncounterPatch));
 
 #if DEBUG

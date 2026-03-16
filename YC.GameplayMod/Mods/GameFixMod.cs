@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 using BaseMod.Core;
 
@@ -14,6 +15,7 @@ internal class GameFixMod {
     internal static MelonPreferences_Entry<bool> Enabled;
     internal static MelonPreferences_Entry<bool> JoinThreesome;
     internal static MelonPreferences_Entry<bool> AssistAlly;
+    internal static MelonPreferences_Entry<bool> AllyAttackTarget;
     #endregion
 
     #region States
@@ -24,9 +26,11 @@ internal class GameFixMod {
         try {
             Enabled = config.Entry(nameof(GameFixMod), nameof(Enabled), false,
                 "Activates the modification", new PluginConfig.AcceptableValueList<bool>([true, false]));
-            AssistAlly = config.Entry(nameof(GameFixMod), nameof(AssistAlly), false,
+            AssistAlly = config.Entry(nameof(GameFixMod), nameof(AssistAlly), true,
                 "Extend Assist Ally", new PluginConfig.AcceptableValueList<bool>([true, false]));
-            JoinThreesome = config.Entry(nameof(GameFixMod), nameof(JoinThreesome), false,
+            AllyAttackTarget = config.Entry(nameof(GameFixMod), nameof(AllyAttackTarget), true,
+                "When Ally attack enemy they will focus on enemy with lower HP", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            JoinThreesome = config.Entry(nameof(GameFixMod), nameof(JoinThreesome), true,
                 "Extend Join threesome", new PluginConfig.AcceptableValueList<bool>([true, false]));
 
 
@@ -50,8 +54,8 @@ internal class GameFixMod {
             CharacterSex currentAssistSex   = joinedCharacter.characterSex;
 
             if (assistSex.IsPlayer) {
-                Plugin.Log.Debug($"Player join to Threesome");
-                SexEncounter.print($"Player join to Threesome");
+                Plugin.Log.Debug("Player join to Threesome");
+                SexEncounter.print("Player join to Threesome");
                 if (casterSex.characterAttributes.combatAI.isAlly && !casterSex.characterAttributes.CheckForStatus("Charmed")) {
                     casterSex = currentAssistSex;
                     targetSex = currentTargetSex;
@@ -68,8 +72,8 @@ internal class GameFixMod {
                     sexEncounter.battleManager.combatUIManager.DisableSexfightUI();
                 }
             } else if (assistSex.characterAttributes.combatAI.isAlly) {
-                Plugin.Log.Debug($"Ally join to Threesome");
-                SexEncounter.print($"Ally join to Threesome");
+                Plugin.Log.Debug("Ally join to Threesome");
+                SexEncounter.print("Ally join to Threesome");
                 if (targetSex.IsPlayer) {
                     casterSex = currentTargetSex;
                     targetSex = currentCasterSex;
@@ -84,8 +88,8 @@ internal class GameFixMod {
                     assistSex = currentAssistSex;
                 }
             } else if (assistSex.characterAttributes.combatAI.isElite) {
-                Plugin.Log.Debug($"Elite enemy join to Threesome");
-                SexEncounter.print($"Elite enemy join to Threesome");
+                Plugin.Log.Debug("Elite enemy join to Threesome");
+                SexEncounter.print("Elite enemy join to Threesome");
                 if (casterSex.IsPlayer || casterSex.characterAttributes.combatAI.isAlly) {
                     casterSex = currentAssistSex;
                     targetSex = currentCasterSex;
@@ -96,8 +100,8 @@ internal class GameFixMod {
                     assistSex = currentCasterSex;
                 }
             } else {
-                Plugin.Log.Debug($"Enemy join to Threesome");
-                SexEncounter.print($"Enemy join to Threesome");
+                Plugin.Log.Debug("Enemy join to Threesome");
+                SexEncounter.print("Enemy join to Threesome");
                 if (casterSex.IsPlayer || casterSex.characterAttributes.combatAI.isAlly) {
                     casterSex = currentTargetSex;
                     targetSex = currentCasterSex;
@@ -157,7 +161,7 @@ internal class GameFixMod {
         }
     }
 
-    public static void AssistAllyFix(ref CombatAction combatAction) {
+    public static void AssistAllyFix( ref CombatAction combatAction ) {
         if (!Enabled.Value || !AssistAlly.Value)
             return;
 
@@ -182,22 +186,22 @@ internal class GameFixMod {
         int playerWeight = 0;
         int companionWeight = 0;
 
-        playerWeight += BoundsCount(player);
+        playerWeight    += BoundsCount(player);
         companionWeight += BoundsCount(companion);
 
-        playerWeight += player.isGrappled ? 1 : 0;
-        companionWeight *= companion.isGrappled ? 1 : 0;
+        playerWeight    += player.isGrappled ? 1 : 0;
+        companionWeight += companion.isGrappled ? 1 : 0;
 
-        playerWeight -= combatBuffsManager.GetNumberOfStacksOnCharacteR(player, "Resolute cheer");
+        playerWeight    -= combatBuffsManager.GetNumberOfStacksOnCharacteR(player, "Resolute cheer");
         companionWeight -= combatBuffsManager.GetNumberOfStacksOnCharacteR(companion, "Resolute cheer");
 
-        playerWeight -= combatBuffsManager.GetNumberOfStacksOnCharacteR(player, "Battle cheer");
+        playerWeight    -= combatBuffsManager.GetNumberOfStacksOnCharacteR(player, "Battle cheer");
         companionWeight -= combatBuffsManager.GetNumberOfStacksOnCharacteR(companion, "Battle cheer");
 
-        playerWeight = Math.Max(playerWeight, 0);
+        playerWeight    = Math.Max(playerWeight, 0);
         companionWeight = Math.Max(companionWeight, 0);
 
-        playerWeight += (int)((1f - (float)player.currentHealth / player.maxHealth) * 10);
+        playerWeight    += (int)((1f - (float)player.currentHealth / player.maxHealth) * 10);
         companionWeight += (int)((1f - (float)companion.currentHealth / companion.maxHealth) * 10);
 
         if (player.currentPleasure > 0)
@@ -208,8 +212,11 @@ internal class GameFixMod {
 
         Plugin.Log.Debug( $"AssistAllyFix weights: Player: {playerWeight}, Companion: {companionWeight}" );
 
-        if (companionWeight >= playerWeight)
+        if (companionWeight >= playerWeight) {
             combatAction.target = companion;
+            Plugin.Log.Debug($"'{combatAction.caster.characterSex.characterName}': Assist to '{combatAction.target.characterSex.characterName}'");
+            BattleManager.print($"{combatAction.caster.characterSex.characterName}: will assist to {combatAction.target.characterSex.characterName}");
+        }
 
         static int BoundsCount(CharacterAttributes characterAttributes) {
             if (characterAttributes.characterSex.restraintsWearing == 0)
@@ -232,6 +239,72 @@ internal class GameFixMod {
                 res += 1;
 
             return res;
+        }
+    }
+
+    internal static void AllyAttackTargetFix( ref CombatAction combatAction ) {
+        if (!Enabled.Value || !AllyAttackTarget.Value)
+            return;
+
+        if (combatAction.caster.isPlayer || !combatAction.caster.combatAI.isAlly)
+            return;
+
+        if (combatAction.target.combatAI.isAlly || combatAction.target.isPlayer)
+            return;
+
+        if (combatAction.actionType is not 1 and not 2)
+            return;
+
+        var battleManager = combatAction.caster.battleManager;
+        CharacterAttributes currentTarget = combatAction.target;
+        List<CharacterAttributes> otherEnemies = [];
+        if (battleManager.Enemy1Exists && currentTarget != battleManager.characterEnemy1 && CheckCharacter(battleManager.characterEnemy1))
+            otherEnemies.Add(battleManager.characterEnemy1);
+
+        if (battleManager.Enemy2Exists && currentTarget != battleManager.characterEnemy2 && CheckCharacter(battleManager.characterEnemy2))
+            otherEnemies.Add(battleManager.characterEnemy2);
+
+        if (battleManager.Enemy3Exists && currentTarget != battleManager.characterEnemy3 && CheckCharacter(battleManager.characterEnemy3))
+            otherEnemies.Add(battleManager.characterEnemy3);
+
+        if (battleManager.Enemy4Exists && currentTarget != battleManager.characterEnemy4 && CheckCharacter(battleManager.characterEnemy4))
+            otherEnemies.Add(battleManager.characterEnemy4);
+
+        if (battleManager.Enemy5Exists && currentTarget != battleManager.characterEnemy5 && CheckCharacter(battleManager.characterEnemy5))
+            otherEnemies.Add(battleManager.characterEnemy5);
+
+        if (otherEnemies.Count == 0)
+            return;
+
+        CharacterAttributes newTarget = currentTarget;
+        foreach(CharacterAttributes enemy in otherEnemies) {
+            if ( enemy.currentHealth < newTarget.currentHealth )
+                newTarget = enemy;
+        }
+
+        if (newTarget != currentTarget) {
+            combatAction.target = newTarget;
+            Plugin.Log.Debug( $"Change CombatAction target from {currentTarget.characterName} to {newTarget.characterName}" );
+            BattleManager.print($"{combatAction.caster.characterSex.characterName}: will attack {newTarget.characterName}");
+        }
+
+        static bool CheckCharacter(CharacterAttributes characterAttributes) {
+            if (characterAttributes.isPlayer || characterAttributes.combatAI.isAlly)
+                return false;
+
+            if (characterAttributes.currentHealth < 1)
+                return false;
+               
+            if (characterAttributes.characterSex.IsGrappled) 
+                return false;
+
+            if (characterAttributes.CheckForStatus("Defenseless") || characterAttributes.CheckForStatus("Weakened"))
+                return false;
+
+            if (characterAttributes.characterSex.IsBoundHeavyRestraint > 0)
+                return false;
+            
+            return true;
         }
     }
 }

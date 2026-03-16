@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 
 using BaseMod.Core;
 using BaseMod.Core.Extensions;
@@ -127,7 +128,11 @@ internal class SexChoiceRealismMod {
         }
     }
 
-    internal static int GetSexId(CharacterSex casterSex, CharacterSex targetSex, CharacterSex assistSex = null) {
+    internal static int GetSexId(CharacterSex casterSex, CharacterSex targetSex) => GetSexId(casterSex, targetSex, null, SexTag.None);
+    internal static int GetSexId(CharacterSex casterSex, CharacterSex targetSex, CharacterSex assistSex) => GetSexId(casterSex, targetSex, assistSex, SexTag.None, PositionActionMode.None);
+    internal static int GetSexId(CharacterSex casterSex, CharacterSex targetSex, SexTag prefferSexTag) => GetSexId(casterSex, targetSex, null, prefferSexTag, PositionActionMode.None);
+    internal static int GetSexId(CharacterSex casterSex, CharacterSex targetSex, PositionActionMode prefferPositionAction) => GetSexId(casterSex, targetSex, null, SexTag.None, prefferPositionAction);
+    internal static int GetSexId(CharacterSex casterSex, CharacterSex targetSex, CharacterSex assistSex = null, SexTag prefferSexTag = SexTag.None, PositionActionMode prefferPositionAction = PositionActionMode.None) {
         if (!Enabled.Value || SceneManager.GetActiveScene().buildIndex < 2) {
             Plugin.Log.Info("Exit due execute condition");
             return -1;
@@ -160,15 +165,15 @@ internal class SexChoiceRealismMod {
             assistSex.IsActive = casterSex.IsActive;
         }
 
-        var (positionGroup, positionAction) = ChooseChanceMixed(casterSex, targetSex);
+        var positionGroup = GetPositionGroup(casterSex, targetSex);
         if (positionGroup is PositionGroup.Foreplay) {
             if (casterSex.IsActive && !casterSex.IsFuta && !casterSex.IsMale) {
-                Plugin.Log.Debug($"Reset Caster role for Foreplay");
+                Plugin.Log.Debug($"{casterSex.characterName}: Reset Caster role for Foreplay");
                 casterSex.IsActive = false;
             }
 
             if (targetSex.IsActive && !targetSex.IsFuta && !targetSex.IsMale) {
-                Plugin.Log.Debug($"Reset Target role for Foreplay");
+                Plugin.Log.Debug($"{casterSex.characterName}: Reset Target role for Foreplay");
                 targetSex.IsActive = false;
             }
 
@@ -177,7 +182,7 @@ internal class SexChoiceRealismMod {
             }
         }
 
-        List<(SexMoveExtended move, int score)> sexMoves = GetCharacterSexMoves( positionGroup, positionAction, casterSex, targetSex, assistSex );
+        List<(SexMoveExtended move, int score)> sexMoves = GetCharacterSexMoves( positionGroup, casterSex, targetSex, assistSex, prefferSexTag );
 
         if (sexMoves.Count <= 0) {
             Plugin.Log.Info("Exit due EMPTY character sexMoves");
@@ -187,7 +192,7 @@ internal class SexChoiceRealismMod {
         var move = ChooseWeightedRandom(sexMoves);
         LastMove = move;
 
-        Plugin.Log.Info($"SexID: {move?.ID ?? -1}; Caster role: {(casterSex.IsActive ? "Active" : "Passive")}; Target role: {(casterSex.IsActive ? "Active" : "Passive")}");
+        Plugin.Log.Info($"SexID: {move?.ID ?? -1}; Caster role: {(casterSex.IsActive ? "Active" : "Passive")}; Target role: {(targetSex.IsActive ? "Active" : "Passive")}");
         return move is not null ? move.ID : -1;
     }
 
@@ -244,11 +249,13 @@ internal class SexChoiceRealismMod {
             Id = 1,
             Name = "Balanced",
             Perform = new PersonalitySexTags.SexTags {
+                Modifier = 1,
                 PreferredTags = SexTag.Universal | SexTag.Sensual,
                 NeutralTags = SexTag.Service | SexTag.Wresting,
                 AvoidTags = SexTag.Rough | SexTag.Smothering | SexTag.Spanking
             },
             Command = new PersonalitySexTags.SexTags {
+                Modifier = 1,
                 PreferredTags = SexTag.Sensual | SexTag.Universal,
                 NeutralTags = SexTag.Dominant | SexTag.Service,
                 AvoidTags = SexTag.Rough | SexTag.Smothering | SexTag.Spanking
@@ -258,11 +265,13 @@ internal class SexChoiceRealismMod {
             Id = 2,
             Name = "Dominant",
             Perform = new PersonalitySexTags.SexTags {
+                Modifier = 3,
                 PreferredTags = SexTag.Dominant | SexTag.Rough | SexTag.Smothering | SexTag.Spanking,
                 NeutralTags = SexTag.Universal | SexTag.Wresting,
                 AvoidTags = SexTag.Service | SexTag.Sensual
             },
             Command = new PersonalitySexTags.SexTags {
+                Modifier = 1,
                 PreferredTags = SexTag.Wresting,
                 NeutralTags = SexTag.Rough | SexTag.Sensual | SexTag.Universal,
                 AvoidTags = SexTag.Smothering | SexTag.Spanking | SexTag.Service
@@ -272,11 +281,13 @@ internal class SexChoiceRealismMod {
             Id = 3,
             Name = "Defensive",
             Perform = new PersonalitySexTags.SexTags {
+                Modifier = 1,
                 PreferredTags = SexTag.Sensual | SexTag.Service,
                 NeutralTags = SexTag.Universal,
                 AvoidTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking | SexTag.Smothering | SexTag.Wresting
             },
             Command = new PersonalitySexTags.SexTags {
+                Modifier = 2,
                 PreferredTags = SexTag.Sensual | SexTag.Service,
                 NeutralTags = SexTag.Universal,
                 AvoidTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking | SexTag.Smothering
@@ -286,11 +297,13 @@ internal class SexChoiceRealismMod {
             Id = 4,
             Name = "Passionate",
             Perform = new PersonalitySexTags.SexTags {
+                Modifier = 2,
                 PreferredTags = SexTag.Rough | SexTag.Sensual | SexTag.Wresting,
                 NeutralTags = SexTag.Dominant | SexTag.Universal,
                 AvoidTags = SexTag.Service
             },
             Command = new PersonalitySexTags.SexTags {
+                Modifier = 1,
                 PreferredTags = SexTag.Dominant | SexTag.Rough | SexTag.Smothering,
                 NeutralTags = SexTag.Wresting | SexTag.Sensual,
                 AvoidTags = SexTag.Service
@@ -300,11 +313,13 @@ internal class SexChoiceRealismMod {
             Id = 5,
             Name = "Submissive",
             Perform = new PersonalitySexTags.SexTags {
+                Modifier = 1,
                 PreferredTags = SexTag.Service,
                 NeutralTags = SexTag.Universal | SexTag.Sensual,
                 AvoidTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking | SexTag.Smothering | SexTag.Wresting
             },
             Command = new PersonalitySexTags.SexTags {
+                Modifier = 3,
                 PreferredTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking | SexTag.Smothering,
                 NeutralTags = SexTag.Sensual,
                 AvoidTags = SexTag.Wresting
@@ -314,11 +329,13 @@ internal class SexChoiceRealismMod {
             Id = 6,
             Name = "Trickster",
             Perform = new PersonalitySexTags.SexTags {
+                Modifier = 1,
                 PreferredTags = SexTag.Rough | SexTag.Smothering | SexTag.Wresting,
                 NeutralTags = SexTag.Universal | SexTag.Dominant | SexTag.Sensual,
                 AvoidTags = SexTag.Service
             },
             Command = new PersonalitySexTags.SexTags {
+                Modifier = 1,
                 PreferredTags = SexTag.Dominant | SexTag.Rough | SexTag.Spanking,
                 NeutralTags = SexTag.Wresting | SexTag.Sensual,
                 AvoidTags = SexTag.Service
@@ -341,52 +358,56 @@ internal class SexChoiceRealismMod {
 
                 if (buffUI.buff.buffName.Contains("Charmed"))
                     status |= CharacterStatus.Charmed;
+
+                if (buffUI.buff.buffName.Contains("Slut collar"))
+                    status |= CharacterStatus.SlutCollar;
+
+                if (buffUI.buff.buffName.Contains("Submission collar"))
+                    status |= CharacterStatus.SubmissiveCollar;
             }
         }
 
         return status;
     }
 
-    private static (PositionGroup group, PositionActionMode actionMode ) ChooseChanceMixed(CharacterSex casterSex, CharacterSex targetSex) {
-        CharacterStatus casterStatus = GetCharacterStatus( casterSex.characterAttributes);
-        CharacterStatus targetStatus = GetCharacterStatus( targetSex.characterAttributes );
-
+    private static PositionGroup GetPositionGroup(CharacterSex casterSex, CharacterSex targetSex) {
         try {
             int sexChance = 40;
             if (casterSex.gameObject.TryGetComponentWithCast(out GameplayModComponent casterComponent)
                 && targetSex.gameObject.TryGetComponentWithCast(out GameplayModComponent targetComponent)) {
-                int casterBonus = 0;
-                int targetBonus = 0;
-
-                casterBonus += casterComponent.CumsCount;
-                casterBonus += (casterComponent.SexCount - casterComponent.CumsCount) * 5;
-                casterBonus += (casterComponent.Attributes.currentPleasure <= 0 ? 0 : Math.Min(casterComponent.Attributes.currentPleasure / 2500, 1)) * 5;
-                casterBonus += casterStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
-                casterBonus -= casterStatus.HasFlag(CharacterStatus.Charmed) ? 3 : 0;
-
-                targetBonus += targetComponent.CumsCount;
-                targetBonus += (targetComponent.SexCount - targetComponent.CumsCount) * 5;
-                targetBonus += (targetComponent.Attributes.currentPleasure <= 0 ? 0 : Math.Min(targetComponent.Attributes.currentPleasure / 2500, 1)) * 5;
-                targetBonus += targetStatus.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
-                targetBonus += targetStatus.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
+                int casterBonus = GetBonus(casterComponent);
+                int targetBonus = GetBonus(targetComponent);
 
                 sexChance = Math.Clamp(targetBonus + casterBonus, 5, 95);
             }
 
             PositionGroup group = RandomUtils.Chance(sexChance) ? PositionGroup.Sex : PositionGroup.Foreplay;
-            PositionActionMode positionAction = PositionActionMode.Perform;
-            if (targetStatus.HasFlag(CharacterStatus.Collared) || targetStatus.HasFlag(CharacterStatus.Aroused) || targetStatus.HasFlag(CharacterStatus.Charmed))
-                positionAction |= PositionActionMode.Command;
-            
-            Plugin.Log.Info($"Select Sex moves: Chance: {sexChance} => Type: {group}, Mode: {positionAction}");
-            return (group, positionAction);
+                        
+            Plugin.Log.Info($"Select Sex moves: Chance: {sexChance} => Type: {group}");
+            return group;
+
+            static int GetBonus(GameplayModComponent component) {
+                CharacterStatus status = GetCharacterStatus( component.Attributes);
+
+                int bonus = 0;
+
+                bonus -= component.CumsCount * 5;
+                bonus += (component.SexCount - component.CumsCount) * 10;
+                bonus += (component.Attributes.currentPleasure <= 0 ? 0 : Math.Min(component.Attributes.currentPleasure / 2500, 1)) * 5;
+                bonus += status.HasFlag(CharacterStatus.Aroused) ? 5 : 0;
+                bonus += status.HasFlag(CharacterStatus.Charmed) ? 5 : 0;
+                bonus += status.HasFlag(CharacterStatus.SlutCollar) ? 5 : 0;
+                bonus += status.HasFlag(CharacterStatus.SubmissiveCollar) ? 5 : 0;
+
+                return Math.Max(bonus, 0);
+            }
         } catch (Exception ex) {
             Plugin.Log.Error(ex);
-            return (PositionGroup.Any, PositionActionMode.Any);
+            return PositionGroup.Any;
         }
     }
 
-    private static List<(SexMoveExtended move, int score)> GetCharacterSexMoves(PositionGroup positionGroup, PositionActionMode positionAction, CharacterSex casterSex, CharacterSex targetSex, CharacterSex assistSex) {
+    private static List<(SexMoveExtended move, int score)> GetCharacterSexMoves(PositionGroup positionGroup, CharacterSex casterSex, CharacterSex targetSex, CharacterSex assistSex, SexTag prefferSexTag = SexTag.None, PositionActionMode prefferPositionAction = PositionActionMode.None) {
         List<(SexMoveExtended move, int score)> sexMoves = [];
         CharacterGender casterGender = GetCharacterGender( casterSex );
         CharacterRole casterRole = casterSex.IsActive ? CharacterRole.Active : CharacterRole.Passive;
@@ -403,7 +424,13 @@ internal class SexChoiceRealismMod {
         int personalityId = casterSex.gameObject.TryGetComponentWithCast(out GameplayModComponent casterComponent)
             ? casterComponent.PersonalityId
             : 0;
-        PersonalitySexTags sexType = PersonalitySexTypes.FirstOrDefault( t => t.Id == personalityId )?.UpdateByStatus(GetCharacterStatus(casterSex.characterAttributes));
+        PersonalitySexTags personality = PersonalitySexTypes.FirstOrDefault( t => t.Id == personalityId )?.UpdateByStatus(GetCharacterStatus(casterSex.characterAttributes));
+
+        CharacterStatus targetStatus = GetCharacterStatus(targetSex.characterAttributes);
+        if ( targetStatus is CharacterStatus.Charmed ) {
+            prefferSexTag = SexTag.None;
+            prefferPositionAction = PositionActionMode.Command;
+        }
 
         foreach (var sexMove in SexMoves) {
             if (sexMove.IsDisabled)
@@ -412,10 +439,7 @@ internal class SexChoiceRealismMod {
             if (!positionGroup.HasFlag(sexMove.PositionGroup))
                 continue;
 
-            if ((positionAction & sexMove.PositionAction) == 0)
-                continue;
-
-            if (LastMove is not null && sexMove.ID == LastMove.ID)
+            if (sexMove.ID == casterSex.currentSexEncounter?.SexID)
                 continue;
 
             if (sexMove.IsThreesome != isThreesome)
@@ -424,7 +448,7 @@ internal class SexChoiceRealismMod {
             if (!CheckMainRolesAndGenders(sexMove, casterGender, casterRole, targetGender, targetRole))
                 continue;
 
-            if (sexMove.IsThreesome && (!sexMove.AssistGender.HasFlag(assistGender) || !sexMove.AssistRole.HasFlag(assistRole)))
+            if (sexMove.IsThreesome && ((sexMove.AssistGender & assistGender) == 0 || (sexMove.AssistRole & assistRole) == 0 ))
                 continue;
 
             int score = 0;
@@ -434,7 +458,7 @@ internal class SexChoiceRealismMod {
 
                 score = 1;
             } else {
-                score = GetPositionScore(sexMove, sexType);
+                score = GetPositionScore(sexMove, personality, prefferSexTag, prefferPositionAction);
             }
 
             sexMoves.Add((sexMove, score));
@@ -458,15 +482,15 @@ internal class SexChoiceRealismMod {
 
     private static bool CheckMainRolesAndGenders(SexMoveExtended sexMove, CharacterGender casterGender, CharacterRole casterRole, CharacterGender targetGender, CharacterRole targetRole) {
         // Обычная проверка
-        if (sexMove.CasterGender.HasFlag(casterGender) && sexMove.CasterRole.HasFlag(casterRole)
-            && sexMove.TargetGender.HasFlag(targetGender) && sexMove.TargetRole.HasFlag(targetRole)) {
+        if ((sexMove.CasterGender & casterGender) != 0 && (sexMove.CasterRole & casterRole) != 0
+            && (sexMove.TargetGender & targetGender) != 0 && (sexMove.TargetRole & targetRole) != 0) {
             return true;
         }
 
         // Реверс только если поза универсальная
         if (sexMove.IsCommand && sexMove.IsPerform) {
-            if (sexMove.CasterGender.HasFlag(targetGender) && sexMove.CasterRole.HasFlag(targetRole)
-                && sexMove.TargetGender.HasFlag(casterGender) && sexMove.TargetRole.HasFlag(casterRole)) {
+            if ((sexMove.CasterGender & targetGender) != 0 && (sexMove.CasterRole & targetRole) != 0
+                && (sexMove.TargetGender & casterGender) != 0 && (sexMove.TargetRole & casterRole) != 0) {
                 return true;
             }
         }
@@ -474,46 +498,85 @@ internal class SexChoiceRealismMod {
         return false;
     }
 
-    private static int GetPositionScore(SexMoveExtended sexMove, PersonalitySexTags personality) {
+    private static int GetPositionScore(SexMoveExtended sexMove, PersonalitySexTags personality, SexTag prefferSexTag = SexTag.None, PositionActionMode prefferPositionAction = PositionActionMode.None) {
         if (personality == null)
             return 1;
 
-        int score           = 0;
-        int preferredScore  = 5;
-        int neutralScore    = 2;
-        int avoidScore      = -3;
-
-        foreach (SexTag tag in AllSexTags) {
-            if (tag == SexTag.None)
-                continue;
-
-            if (!sexMove.SexTags.HasFlag(tag))
-                continue;
-
-            if (sexMove.IsPerform) {
-                score += GetWeight(tag, personality.Perform);
-            }
-            
-            if (sexMove.IsCommand) {
-                score += GetWeight(tag, personality.Command);
-            }
+        int score = 0;
+        if (sexMove.IsPerform) {
+            score += GetWeight(sexMove.SexTags, personality.Perform);
         }
 
-        if (sexMove.Equals(LastMove))
-            score /= 2;
+        if (sexMove.IsCommand) {
+            score += GetWeight(sexMove.SexTags, personality.Command);
+        }
+
+        if (prefferSexTag is not SexTag.None) {
+            if ((sexMove.SexTags & prefferSexTag) == prefferSexTag)
+                score *= 4;
+            else if ((sexMove.SexTags & prefferSexTag) != 0)
+                score *= 2;
+        }
+
+        if (prefferPositionAction is not PositionActionMode.None) {
+            if ((sexMove.PositionAction & prefferPositionAction) == prefferPositionAction)
+                score *= 4;
+            else if ((sexMove.PositionAction & prefferPositionAction) != 0)
+                score *= 2;
+        }
+
+        /*// SexTag moveTags = sexMove.SexTags;
+        //int tagsCount = 0;
+        //while (moveTags != 0) {
+        //    SexTag tag = moveTags & (SexTag)(-(int)moveTags);
+
+        //    if (sexMove.IsPerform) {
+        //        score += GetWeight(tag, personality.Perform);
+        //    }
+
+        //    if (sexMove.IsCommand) {
+        //        score += GetWeight(tag, personality.Command);
+        //    }
+
+        //    moveTags &= moveTags - 1;
+        //    tagsCount++;
+        //}
+
+        //if (tagsCount > 0)
+        //    score /= tagsCount;*/
+
+        int modifier;
+        if (sexMove.IsCommand && sexMove.IsPerform) {
+            modifier = Math.Max(personality.Perform.Modifier, personality.Command.Modifier);
+        } else if (sexMove.IsCommand) {
+            modifier = personality.Command.Modifier;
+        } else {
+            modifier = personality.Perform.Modifier;
+        }
+
+        score *= Math.Max(modifier, 1);
 
         return score == 0 ? 1 : Math.Max(score, 0);
 
-        int GetWeight(SexTag tag, PersonalitySexTags.SexTags personalityTags) {
-            if (personalityTags.PreferredTags.HasFlag(tag)) {
-                return RandomUtils.Int32(preferredScore - 1, preferredScore + 1);
-            } else if (personalityTags.NeutralTags.HasFlag(tag)) {
-                return RandomUtils.Int32(neutralScore - 1, neutralScore + 1);
-            } else if (personalityTags.AvoidTags.HasFlag(tag)) {
-                return RandomUtils.Int32(avoidScore - 1, avoidScore + 1);
-            }
+        static int GetWeight(SexTag tags, PersonalitySexTags.SexTags personalityTags) {
+            int preferredScore  = 5;
+            int neutralScore    = 2;
+            int avoidScore      = 3;
+            
+            int prefferedCount  = BitOperations.PopCount((uint)(tags & personalityTags.PreferredTags));
+            int neutralCount    = BitOperations.PopCount((uint)(tags & personalityTags.NeutralTags));
+            int avoidCount      = BitOperations.PopCount((uint)(tags & personalityTags.AvoidTags));
+            int totalCount      = prefferedCount + neutralCount + avoidCount;
 
-            return 0;
+            int weight = 0;
+            weight += prefferedCount * RandomUtils.Int32(preferredScore - 1, preferredScore + 1);
+            weight += neutralCount * RandomUtils.Int32(neutralScore - 1, neutralScore + 1);
+            weight -= avoidCount * RandomUtils.Int32(avoidScore - 1, avoidScore + 1);
+
+            if (totalCount > 0)
+                weight /= totalCount;
+
+            return weight;
         }
     }
 
@@ -526,6 +589,9 @@ internal class SexChoiceRealismMod {
         int current = 0;
 
         foreach (var (move, score) in moves) {
+            if (score <= 0)
+                continue;
+
             current += score;
             if (roll < current)
                 return move;

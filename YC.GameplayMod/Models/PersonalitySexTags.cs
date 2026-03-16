@@ -68,6 +68,7 @@ internal class PersonalitySexTags {
         public SexTag PreferredTags { get; set; }
         public SexTag NeutralTags { get; set; }
         public SexTag AvoidTags { get; set; }
+        public int Modifier { get; set; } = 1;
 
         internal SexTags Copy() {
             return new SexTags() {

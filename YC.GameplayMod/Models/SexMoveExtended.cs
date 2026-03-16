@@ -138,46 +138,46 @@ internal class SexMoveExtended : IComparable<SexMoveExtended> {
 
 [Flags]
 internal enum SexTag {
-    None = 0,
-    Dominant = 1 << 0,
-    Rough = 1 << 1,
-    Sensual = 1 << 2,
-    Service = 1 << 3,
-    Smothering = 1 << 4,
-    Spanking = 1 << 5,
-    Universal = 1 << 6,
-    Wresting = 1 << 7
+    None        = 0,
+    Dominant    = 1 << 0,
+    Rough       = 1 << 1,
+    Sensual     = 1 << 2,
+    Service     = 1 << 3,
+    Smothering  = 1 << 4,
+    Spanking    = 1 << 5,
+    Universal   = 1 << 6,
+    Wresting    = 1 << 7
 }
 
 [Flags]
 internal enum PositionGroup {
-    None = 0,
-    Foreplay = 1 << 0,
-    Sex = 1 << 1,
-    Any = Foreplay | Sex,
+    None        = 0,
+    Foreplay    = 1 << 0,
+    Sex         = 1 << 1,
+    Any         = Foreplay | Sex,
 }
 
 [Flags]
 internal enum PositionActionMode {
-    None = 0,
-    Command = 1 << 0,
-    Perform = 1 << 1,
-    Any = Command | Perform,
+    None        = 0,
+    Command     = 1 << 0,
+    Perform     = 1 << 1,
+    Any         = Command | Perform,
 }
 
 [Flags]
 internal enum CharacterGender {
-    None = 0,
-    Female = 1 << 0,
-    Futa = 1 << 1,
-    Male = 1 << 2,
-    Any = Female | Futa | Male
+    None        = 0,
+    Female      = 1 << 0,
+    Futa        = 1 << 1,
+    Male        = 1 << 2,
+    Any         = Female | Futa | Male
 }
 
 [Flags]
 internal enum CharacterRole {
-    None = 0,
-    Active = 1 << 0,
-    Passive = 1 << 1,
-    Any = Active | Passive
+    None        = 0,
+    Active      = 1 << 0,
+    Passive     = 1 << 1,
+    Any         = Active | Passive
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Xml;
 
 using BaseMod.Core.Extensions;
 using BaseMod.Core.Utils;
@@ -11,21 +10,27 @@ using Il2CppInterop.Runtime.Injection;
 
 using UnityEngine;
 
+using YC.GameplayMod.Models;
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Components;
 public class GameplayModComponent : MonoBehaviour {
+    private bool _componentInitialized = false;
+    private bool _sexInteractionSet = false;
+    private CharacterRole _characterRole = CharacterRole.None;
+
     internal CharacterSex Sex { get; private set; }
-    internal CharacterAttributes Attributes { get; private set; }
+    internal CharacterAttributes Attributes => Sex.characterAttributes;
 
     internal int CumsCount { get; set; } = 0;
     internal int SexCount { get; set; } = 0;
-    internal int PersonalityId { get; private set; } = 0;
-    internal bool IsActiveRole { get; private set; } = false;
-
-    private bool _componentInitialized = false;
-    private bool _sexInteractionSet = false;
-    private float _timer = 0f;
+    internal int PersonalityId { get; set; }
+    internal bool IsActiveRole => _characterRole switch { 
+        CharacterRole.Active => true,
+        CharacterRole.Passive => false,
+        CharacterRole.Any => RandomUtils.Chance( Sex.IsFuta || ( Sex.IsMale && !Sex.IsFemboy) ? 75 : 50 ),
+        _ => false,
+    };
 
     static GameplayModComponent() {
         ClassInjector.RegisterTypeInIl2Cpp<GameplayModComponent>();
@@ -50,7 +55,6 @@ public class GameplayModComponent : MonoBehaviour {
             if (gameObject.TryGetComponentWithCast(out CharacterSex characterSex)) {
                 Plugin.Log.Info($"Register class for character {characterSex.characterName}");
                 Sex = characterSex;
-                IsActiveRole = Sex.IsActive;
 
                 LateInitialize();
             } else {
@@ -84,8 +88,9 @@ public class GameplayModComponent : MonoBehaviour {
         }
     }
 
-    public void FixedUpdate() {
-        LateInitialize();
+    /*public void FixedUpdate() {
+        if (Attributes is null)
+            return;
 
         if (SexCount > 0) {
             if (Sex.IsGrappled) {
@@ -104,7 +109,7 @@ public class GameplayModComponent : MonoBehaviour {
         } else {
             _timer = 0f;
         }
-    }
+    }*/
 
     [HideFromIl2Cpp]
     public static void RegisterClass(MonoBehaviour monoBehaviour) {
@@ -112,28 +117,39 @@ public class GameplayModComponent : MonoBehaviour {
     }
 
     private void LateInitialize() {
-        if (Attributes is not null)
+        if (Attributes is null || _componentInitialized)
             return;
 
-        if (Sex.characterAttributes is not null) {
-            Attributes = Sex.characterAttributes;
+        _characterRole = DefineCharacterRole(Sex.CharacterRole);
 
-            if (Attributes.isPlayer) {
-                PersonalityId = CharacterDataa.Instance.adultSettingsDATA.SexGameplayAI;
-            } else {
-                PersonalityId = Attributes.enemyData?.statsDATA.EnemyPersonality ?? 0;
+        if (Attributes.isPlayer) {
+            PersonalityId = CharacterDataa.Instance.adultSettingsDATA.SexGameplayAI;
+        } else {
+            PersonalityId = Attributes.enemyData?.statsDATA.EnemyPersonality ?? 0;
 
-                if (SexChoiceRealismMod.Enabled.Value) {
-                    if (SexChoiceRealismMod.RandomPersonalityElite.Value && (Attributes.isAreaBoss || Attributes.combatAI?.isElite == true))
-                        PersonalityId = RandomUtils.Int32(1, 6);
-                    else if (SexChoiceRealismMod.RandomPersonalityAlly.Value && Attributes.combatAI?.isAlly == true)
-                        PersonalityId = RandomUtils.Int32(1, 6);
-                    else if (SexChoiceRealismMod.RandomPersonalityEnemy.Value)
-                        PersonalityId = RandomUtils.Int32(1, 6);
-                }
+            if ( Attributes.isAreaBoss || Attributes.combatAI.isElite == true ) {
+                if ( SexChoiceRealismMod.RandomPersonalityElite.Value )
+                    PersonalityId = RandomUtils.Int32(1, 6);
+            } else if (Attributes.combatAI.isAlly) {
+                if( SexChoiceRealismMod.RandomPersonalityAlly.Value )
+                    PersonalityId = RandomUtils.Int32(1, 6);
+            } else if (SexChoiceRealismMod.RandomPersonalityEnemy.Value) {
+                PersonalityId = RandomUtils.Int32(1, 6);
             }
-
-            _componentInitialized = true;
         }
+
+        Plugin.Log.Info( $"{Sex.characterName}: Role: {_characterRole}, PersonalityId: {PersonalityId}" );
+
+        _componentInitialized = true;
+    }
+
+    private static CharacterRole DefineCharacterRole(int roleId) {
+        return roleId switch {
+            0 => CharacterRole.Passive,
+            1 => CharacterRole.Active,
+            2 => CharacterRole.Any,
+            3 => RandomUtils.Chance(50) ? CharacterRole.Active : CharacterRole.Passive,
+            _ => CharacterRole.Any,
+        };
     }
 }
