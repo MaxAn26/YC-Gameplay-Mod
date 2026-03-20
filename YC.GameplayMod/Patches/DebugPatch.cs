@@ -29,18 +29,6 @@ internal class DebugPatch {
 #if DEBUG
     [HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.RemoveCharacterFromList))]
-    static bool BattleManagerRemoveCharacterFromListPrefix(bool __runOriginal, CharacterAttributes __0) {
-        BattleManager.print($"Remove character: {__0.characterName}");
-
-        if (!__runOriginal)
-            return false;
-
-        return true;
-    }
-
-    [HarmonyPrefix]
-    [HarmonyWrapSafe]
     [HarmonyPatch(typeof(Debug), nameof(Debug.Log), [typeof(Il2CppSystem.Object)])]
     [HarmonyPatch(typeof(Debug), nameof(Debug.LogWarning), [typeof(Il2CppSystem.Object)])]
     [HarmonyPatch(typeof(Debug), nameof(Debug.LogError), [typeof(Il2CppSystem.Object)])]
