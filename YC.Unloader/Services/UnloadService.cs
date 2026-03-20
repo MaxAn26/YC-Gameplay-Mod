@@ -138,4 +138,70 @@ internal static class UnloadService {
             Plugin.Log.Error(ex.Message);
         }
     }
+
+    internal static void UnloadInventoryItems() {
+        try {
+            if (Zessentials.Instance.gameObject.TryGetComponentWithCast(out CombatHolder holder)) {
+                List<Models.InventoryItem> items = [];
+
+                items.Clear();
+                Plugin.Log.Info("Get CombatConsumables from CombatHolder");
+                foreach ( var consumableItem in holder.consumables ) {
+                    items.Add(Models.InventoryItem.FromCombatConsumable(consumableItem));
+                }
+
+                if (items.Count > 0) {
+                    if (JsonUtils.TrySerialize(Plugin.PluginResources, "CombatConsumables.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false)) {
+                        Plugin.Log.Info($"CombatConsumables.json was created in {Plugin.PluginResources}");
+                    } else {
+                        Plugin.Log.Info("CombatConsumables.json was NOT created");
+                    }
+                }
+
+                items.Clear();
+                Plugin.Log.Info("Get CombatTrinkets from CombatHolder");
+                foreach (var trinketItem in holder.trinkets) {
+                    items.Add(Models.InventoryItem.FromCombatTrinket(trinketItem));
+                }
+
+                if (items.Count > 0) {
+                    if (JsonUtils.TrySerialize(Plugin.PluginResources, "CombatTrinkets.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false)) {
+                        Plugin.Log.Info($"CombatTrinkets.json was created in {Plugin.PluginResources}");
+                    } else {
+                        Plugin.Log.Info("CombatTrinkets.json was NOT created");
+                    }
+                }
+
+                items.Clear();
+                Plugin.Log.Info("Get CombatWeapons from CombatHolder");
+                foreach (var weaponItem in holder.weapons) {
+                    items.Add(Models.InventoryItem.FromCombatWeapon(weaponItem));
+                }
+
+                if (items.Count > 0) {
+                    if (JsonUtils.TrySerialize(Plugin.PluginResources, "CombatWeapons.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false)) {
+                        Plugin.Log.Info($"CombatWeapons.json was created in {Plugin.PluginResources}");
+                    } else {
+                        Plugin.Log.Info("CombatWeapons.json was NOT created");
+                    }
+                }
+
+                items.Clear();
+                Plugin.Log.Info("Get QuestItems from CombatHolder");
+                foreach (var questItem in holder.questItems) {
+                    items.Add(Models.InventoryItem.FromCombatItem(questItem));
+                }
+
+                if (items.Count > 0) {
+                    if (JsonUtils.TrySerialize(Plugin.PluginResources, "QuestItems.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false)) {
+                        Plugin.Log.Info($"QuestItems.json was created in {Plugin.PluginResources}");
+                    } else {
+                        Plugin.Log.Info("QuestItems.json was NOT created");
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            Plugin.Log.Error(ex.Message);
+        }
+    }
 }
