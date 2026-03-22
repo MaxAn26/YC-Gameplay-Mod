@@ -103,6 +103,8 @@ internal class SexMoveExtended : IComparable<SexMoveExtended> {
 
         if (sexMove.TagDominant)
             sexMoveExtended.SexTags |= SexTag.Dominant;
+        if (sexMove.TagGeneric)
+            sexMoveExtended.SexTags |= SexTag.Generic;
         if (sexMove.TagRough)
             sexMoveExtended.SexTags |= SexTag.Rough;
         if (sexMove.TagSensual)
@@ -140,13 +142,14 @@ internal class SexMoveExtended : IComparable<SexMoveExtended> {
 internal enum SexTag {
     None        = 0,
     Dominant    = 1 << 0,
-    Rough       = 1 << 1,
-    Sensual     = 1 << 2,
-    Service     = 1 << 3,
-    Smothering  = 1 << 4,
-    Spanking    = 1 << 5,
-    Universal   = 1 << 6,
-    Wresting    = 1 << 7
+    Generic     = 1 << 1,
+    Rough       = 1 << 2,
+    Sensual     = 1 << 3,
+    Service     = 1 << 4,
+    Smothering  = 1 << 5,
+    Spanking    = 1 << 6,
+    Universal   = 1 << 7,
+    Wresting    = 1 << 8
 }
 
 [Flags]

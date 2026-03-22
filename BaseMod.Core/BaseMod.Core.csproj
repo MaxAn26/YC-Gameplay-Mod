@@ -47,12 +47,4 @@
 			<HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath>
 		</Reference>
 	</ItemGroup>
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<MakeDir Directories="$(SolutionDir)@Mods\UserLibs" />
-		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SolutionDir)@Mods\UserLibs" />
-
-		<!-- <MakeDir Directories="$(SolutionDir)@Mods\$(AssemblyName)" /> -->
-		<!-- <Copy SourceFiles="@(CopySource)" DestinationFolder="$(SolutionDir)@Mods\$(AssemblyName)" /> -->
-		<!-- <Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(SolutionDir)@Mods\$(AssemblyName)\%(RecursiveDir)" /> -->
-	</Target>
 </Project>

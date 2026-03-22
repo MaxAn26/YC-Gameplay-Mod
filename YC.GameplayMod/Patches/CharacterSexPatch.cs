@@ -32,7 +32,7 @@ internal class CharacterSexPatch {
     [HarmonyPostfix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(CharacterSex), nameof(CharacterSex.SetDick))]
-    static void CharacterSexSetDickPostfix(CharacterSex __instance, bool __0) {
-        DickStraponVisibilityMod.SetDick(__instance, __0);
+    static void CharacterSexSetDickPostfix(CharacterSex __instance, bool dickVisibility) {
+        DickStraponVisibilityMod.SetDick(__instance, dickVisibility);
     }
 }

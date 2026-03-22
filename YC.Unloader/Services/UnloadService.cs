@@ -29,6 +29,9 @@ internal static class UnloadService {
                 }
             }
 
+            if (clothingList.Count <= 0)
+                return;
+
             clothingList.Sort();
             Plugin.Log.Info($"Prepared {clothingList.Count}/{clothesObj.Count} clothes items");
             if (JsonUtils.TrySerialize(Plugin.PluginResources, "Clothing.json", clothingList, false)) {
@@ -56,6 +59,9 @@ internal static class UnloadService {
                 }
             }
 
+            if (buffList.Count <= 0)
+                return;
+
             Plugin.Log.Info($"Prepared {buffList.Count}/{buffsObj.Count} CombatBuff items");
             if (JsonUtils.TrySerialize(Plugin.PluginResources, "CombatBuffs.json", buffList, false)) { 
                     Plugin.Log.Info($"CombatBuffs.json was created in {Plugin.PluginResources}");
@@ -79,6 +85,9 @@ internal static class UnloadService {
                     talentsList.Add(item);
                 }
             }
+
+            if (talentsList.Count <= 0)
+                return;
 
             Plugin.Log.Info($"Prepared {talentsList.Count}/{talentsObj.Count} CombatTalents items");
             if (JsonUtils.TrySerialize(Plugin.PluginResources, "CombatTalents.json", talentsList, false)) {
@@ -104,6 +113,9 @@ internal static class UnloadService {
                 }
             }
 
+            if (actionsList.Count <= 0)
+                return;
+
             Plugin.Log.Info($"Prepared {actionsList.Count}/{actionsObj.Count} CombatAction items");
             if (JsonUtils.TrySerialize(Plugin.PluginResources, "CombatActions.json", actionsList, false)) {
                 Plugin.Log.Info($"CombatActions.json was created in {Plugin.PluginResources}");
@@ -127,6 +139,9 @@ internal static class UnloadService {
                     passivesList.Add(item);
                 }
             }
+
+            if (passivesList.Count <= 0)
+                return;
 
             Plugin.Log.Info($"Prepared {passivesList.Count}/{passivesObj.Count} CombatEnemyPassive items");
             if (JsonUtils.TrySerialize(Plugin.PluginResources, "CombatEnemyPassive.json", passivesList, false)) {

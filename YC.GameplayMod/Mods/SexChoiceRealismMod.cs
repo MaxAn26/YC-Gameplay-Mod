@@ -57,7 +57,7 @@ internal class SexChoiceRealismMod {
             UpdateMoves = config.Entry(nameof(SexChoiceRealismMod), nameof(UpdateMoves), false, 
                 "Update SexMove.json", new PluginConfig.AcceptableValueList<bool>([true, false]));
             UsePlayerPreferredPositions = config.Entry(nameof(SexChoiceRealismMod), nameof(UsePlayerPreferredPositions), false, 
-                "ONLY use preferred positions", new PluginConfig.AcceptableValueList<bool>([true, false]));
+                "Player will use ONLY preferred positions", new PluginConfig.AcceptableValueList<bool>([true, false]));
 
             AllSexTags = (IList<SexTag>)Enum.GetValues(typeof(SexTag));
         } catch (Exception ex) {

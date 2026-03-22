@@ -6,7 +6,6 @@
 		<LangVersion>latest</LangVersion>
 		<RestoreAdditionalProjectSources>
 			https://api.nuget.org/v3/index.json;
-			https://nuget.bepinex.dev/v3/index.json;
 			https://nuget.samboy.dev/v3/index.json
 		</RestoreAdditionalProjectSources>
 		<RootNamespace>YC.GameplayMod</RootNamespace>
@@ -43,11 +42,6 @@
 	</ItemDefinitionGroup>
 
 	<ItemGroup>
-		<!-- For BepInEx 
-			<PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
-			<PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
-		-->
-
 		<PackageReference Include="LavaGang.MelonLoader" Version="0.7.2" />
 		<PackageReference Include="Samboy063.Tomlet" Version="6.2.0" />
 	</ItemGroup>
@@ -81,36 +75,72 @@
 			<HintPath>..\Libs\UnityEngine.PhysicsModule.dll</HintPath>
 		</Reference>
 	</ItemGroup>
-	
+
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<PropertyGroup>
+			<OutBaseDir>$(SolutionDir)@Mods\</OutBaseDir>
+			<OutModsDir>$(OutBaseDir)Mods\</OutModsDir>
+			<OutUserLibsDir>$(OutBaseDir)UserLibs\</OutUserLibsDir>
+			<OutUserDataDir>$(OutBaseDir)UserData\$(AssemblyName)\</OutUserDataDir>
+		</PropertyGroup>
+
 		<ItemGroup>
-			<CopySource Include="$(TargetDir)*.dll" />
+			<ModDll Include="$(TargetDir)$(TargetFileName)" />
+			<UserLibs Include="$(TargetDir)*.dll"
+					  Exclude="$(TargetDir)$(TargetFileName)" />
 			<PreConfiguredFiles Include="$(ProjectDir)PreConfiguredFiles\**\*.*" />
 		</ItemGroup>
 
-		<MakeDir Directories="$(SolutionDir)@Mods\Mods" />
-		<RemoveDir Directories="$(SolutionDir)@Mods\UserData\$(AssemblyName)" />
-		<MakeDir Directories="$(SolutionDir)@Mods\UserData\$(AssemblyName)" />
-		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SolutionDir)@Mods\Mods" />
-		<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(SolutionDir)@Mods\UserData\$(AssemblyName)\%(RecursiveDir)" />
+		<MakeDir Directories="$(OutModsDir)" />
+		<MakeDir Directories="$(OutUserLibsDir)" />
 
-		<!-- <MakeDir Directories="$(SolutionDir)@Mods\$(AssemblyName)" /> -->
-		<!-- <Copy SourceFiles="@(CopySource)" DestinationFolder="$(SolutionDir)@Mods\$(AssemblyName)" /> -->
-		<!-- <Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(SolutionDir)@Mods\$(AssemblyName)\%(RecursiveDir)" /> -->
+		<RemoveDir Directories="$(OutUserDataDir)" />
+		<MakeDir Directories="$(OutUserDataDir)" />
+
+		<Copy SourceFiles="@(ModDll)"
+			  DestinationFolder="$(OutModsDir)"
+			  SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(UserLibs)"
+			  DestinationFolder="$(OutUserLibsDir)"
+			  SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(PreConfiguredFiles)"
+			  DestinationFolder="$(OutUserDataDir)%(RecursiveDir)" />
 	</Target>
 
 	<Target Name="PostPublish" AfterTargets="Publish" Condition="'$(Configuration)'=='Release'">
+		<PropertyGroup>
+			<OutBaseDir>$(SolutionDir)@Release\$(AssemblyName)\</OutBaseDir>
+			<OutModsDir>$(OutBaseDir)Mods\</OutModsDir>
+			<OutUserLibsDir>$(OutBaseDir)UserLibs\</OutUserLibsDir>
+			<OutUserDataDir>$(OutBaseDir)UserData\$(AssemblyName)\</OutUserDataDir>
+		</PropertyGroup>
+
 		<ItemGroup>
-			<CopySource Include="$(PublishDir)*.dll" />
+			<ModDll Include="$(TargetDir)$(TargetFileName)" />
+			<UserLibs Include="$(TargetDir)*.dll"
+					  Exclude="$(TargetDir)$(TargetFileName)" />
 			<PreConfiguredFiles Include="$(ProjectDir)PreConfiguredFiles\**\*.*" />
+			<ReadmeFiles Include="$(ProjectDir)$(TargetName)_Readme.*" />
 		</ItemGroup>
 
-		<MakeDir Directories="$(SolutionDir)@Release\$(AssemblyName)\Mods" />
-		<RemoveDir Directories="$(SolutionDir)@Mods\UserData\$(AssemblyName)" />
-		<MakeDir Directories="$(SolutionDir)@Release\$(AssemblyName)\UserData\$(AssemblyName)" />
-		<Copy SourceFiles="@(CopySource)" DestinationFolder="$(SolutionDir)@Release\$(AssemblyName)\Mods" />
-		<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(SolutionDir)@Release\$(AssemblyName)\UserData\$(AssemblyName)\%(RecursiveDir)" />
-		<!--<Copy SourceFiles="$(ProjectDir)Gameplay Mod_Readme.rtf" DestinationFolder="$(SolutionDir)@Release\$(AssemblyName)" />-->
-		<ZipDirectory SourceDirectory="$(SolutionDir)@Release\$(AssemblyName)" DestinationFile="$(SolutionDir)@Release\$(AssemblyName)-$(AssemblyVersion).zip" Overwrite="true" />
+		<RemoveDir Directories="$(OutBaseDir)" />
+		<MakeDir Directories="$(OutModsDir)" />
+		<MakeDir Directories="$(OutUserLibsDir)" />
+		<MakeDir Directories="$(OutUserDataDir)" />
+
+		<Copy SourceFiles="@(ModDll)"
+			  DestinationFolder="$(OutModsDir)"
+			  SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(UserLibs)"
+			  DestinationFolder="$(OutUserLibsDir)"
+			  SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(PreConfiguredFiles)"
+			  DestinationFolder="$(OutUserDataDir)%(RecursiveDir)" />
+		<Copy SourceFiles="@(ReadmeFiles)"
+			  DestinationFolder="$(OutBaseDir)" />
+
+		<ZipDirectory SourceDirectory="$(OutBaseDir)"
+					  DestinationFile="$(SolutionDir)@Release\$(AssemblyName)-$(AssemblyVersion).zip"
+					  Overwrite="true" />
 	</Target>
 </Project>

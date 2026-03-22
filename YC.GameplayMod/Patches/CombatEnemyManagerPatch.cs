@@ -14,7 +14,7 @@ namespace YC.GameplayMod.Patches;
 public class CombatEnemyManagerPatch {
     internal static bool Prepare() {
         try {
-            if (!EnemyBodyRandomizerMod.IsModActive)
+            if (!CharacterBodyRandomizerMod.IsModActive)
                 return false;
 
             return true;
@@ -33,9 +33,9 @@ public class CombatEnemyManagerPatch {
         
         if (__result.TryGetComponentWithCast(out CharacterSex characterSex) && !string.IsNullOrWhiteSpace(characterSex.characterName) ) {
             Plugin.Log.Info($"Customize character: {characterSex.characterName}");
-            EnemyBodyRandomizerMod.Apply(__instance, characterSex, characterSex.wardrobe);
+            CharacterBodyRandomizerMod.Apply(__instance, characterSex, characterSex.wardrobe);
             characterSex.NPCSetup(characterSex.IsMale, characterSex.characterName, characterSex.characterAttributes.combatAI.isAlly);
-            EnemyBodyRandomizerMod.SetFutaState(characterSex, characterSex.wardrobe);
+            CharacterBodyRandomizerMod.SetFutaState(characterSex, characterSex.wardrobe);
         }
     }
 }

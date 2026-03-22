@@ -11,8 +11,10 @@ using MelonLoader;
 
 using UnityEngine;
 
+using YC.GameplayMod.Extensions;
+
 namespace YC.GameplayMod.Mods;
-internal class GameFixMod {
+internal class GameExtendMod {
     #region Configuration
     internal static MelonPreferences_Entry<bool> Enabled;
     internal static MelonPreferences_Entry<bool> JoinThreesome;
@@ -26,14 +28,14 @@ internal class GameFixMod {
 
     internal static void Load(PluginConfig config) {
         try {
-            Enabled = config.Entry(nameof(GameFixMod), nameof(Enabled), false,
+            Enabled = config.Entry(nameof(GameExtendMod), nameof(Enabled), false,
                 "Activates the modification", new PluginConfig.AcceptableValueList<bool>([true, false]));
-            AssistAlly = config.Entry(nameof(GameFixMod), nameof(AssistAlly), true,
-                "Extend Assist Ally", new PluginConfig.AcceptableValueList<bool>([true, false]));
-            AttackTarget = config.Entry(nameof(GameFixMod), nameof(AttackTarget), true,
+            AssistAlly = config.Entry(nameof(GameExtendMod), nameof(AssistAlly), true,
+                "Companion will help not only to player; they will help to all companion according with situation", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            AttackTarget = config.Entry(nameof(GameExtendMod), nameof(AttackTarget), true,
                 "When character(Ally or enemy character) attack opponent they will focus on character with lower HP", new PluginConfig.AcceptableValueList<bool>([true, false]));
-            JoinThreesome = config.Entry(nameof(GameFixMod), nameof(JoinThreesome), true,
-                "Extend Join threesome", new PluginConfig.AcceptableValueList<bool>([true, false]));
+            JoinThreesome = config.Entry(nameof(GameExtendMod), nameof(JoinThreesome), true,
+                "When character join to threesome it may change their positions: player or Elite enemies will always get a Caster role", new PluginConfig.AcceptableValueList<bool>([true, false]));
 
 
         } catch (Exception ex) {
@@ -261,31 +263,117 @@ internal class GameFixMod {
             return;
 
         List<CharacterAttributes> enemies = [];
-        if (combatAction.caster.combatAI.isAlly
-            && (!combatAction.target.isPlayer && !combatAction.target.combatAI.isAlly)) {
-            enemies.Clear();
-            enemies = [.. Zessentials.Instance.GetAllFreeEnemyTargets()];
-        } else if ((!combatAction.caster.isPlayer && !combatAction.caster.combatAI.isAlly)
-            && (combatAction.target.isPlayer || combatAction.target.combatAI.isAlly)) {
-            enemies.Clear();
-            enemies = [.. Zessentials.Instance.GetAllFreePlayerTargets()];
+        CharacterAttributes target = null;
+        if (combatAction.caster.IsCompanion(false) && !combatAction.target.IsCompanion()) {
+            target = CompanionAttackTarget( combatAction, [.. Zessentials.Instance.GetAllFreeEnemyTargets()]);
+            SetNewTarget(ref combatAction, target);
+        } else if (combatAction.caster.IsEnemy() && combatAction.target.IsCompanion()) {
+            target = EnemyAttackTarget( combatAction, [.. Zessentials.Instance.GetAllFreePlayerTargets()]);
+            
         }
 
-        enemies = [.. enemies.Where(CheckCharacter)];
-
-        if (enemies.Count <= 0) {
-            combatAction.actionTarget = 0;
-            combatAction.actionType = 9;
-            combatAction.target = null;
+        if (target is null) {
+            combatAction.ToDefence();
             return;
         }
 
-        CharacterAttributes newTarget = enemies.OrderBy(GetScore).First();
+        SetNewTarget(ref combatAction, target);
 
-        if (newTarget != combatAction.target) {
-            Plugin.Log.Debug( $"Change CombatAction target from {combatAction.target.characterName} to {newTarget.characterName}" );
-            combatAction.target = newTarget;
-            Zessentials.Instance.battleManager.console.ConsoleWrite($"{combatAction.caster.characterSex.characterName}: will attack {newTarget.characterName}");
+        static CharacterAttributes CompanionAttackTarget( CombatAction action, List<CharacterAttributes> freeTargets) {
+            freeTargets = [.. freeTargets.Where(CheckCharacter)];
+
+            if (freeTargets.Count <= 0) {
+                return null;
+            }
+
+            CharacterAttributes newTarget = freeTargets.OrderBy(GetTargetScore).First();
+
+            return newTarget;
+
+            static float GetTargetScore(CharacterAttributes characterAttributes) {
+                float score = 0f;
+
+                score += ((float)characterAttributes.currentHealth / characterAttributes.maxHealth);
+
+                score += RandomUtils.Float(0f, 0.2f);
+
+                Plugin.Log.Debug($"{characterAttributes.characterName}: score: {score}");
+                return score;
+            }
+        }
+
+        static CharacterAttributes EnemyAttackTarget(CombatAction action, List<CharacterAttributes> freeTargets) {
+            freeTargets = [.. freeTargets.Where(CheckCharacter)];
+
+            if (freeTargets.Count <= 0) {
+                return null;
+            }
+
+            float casterDamage = 0f;
+            casterDamage += action.caster.equippedWeapon.weaponMinDamage;
+            if (action.isAttack)
+                casterDamage += action.actionEffect1Value * (action.caster.attackPower * action.actionEffect1Scaling / 100f);
+
+            if (action.isSpell)
+                casterDamage += action.actionEffect1Value * (action.caster.spellPower * action.actionEffect1Scaling / 100f);
+
+            int damageBonuses = 100;
+            if (action.isBasicAction) { damageBonuses += action.caster.basicActionBonus; }
+            if (action.isAbility) { damageBonuses += action.caster.abilityPower; }
+            if (action.isWeaponAttack) { damageBonuses += action.caster.weaponDamage; }
+            if (action.isOneHanded) { damageBonuses += action.caster.onehandedDamage; }
+            if (action.isTwoHanded) { damageBonuses += action.caster.twohandedDamage; }
+            if (action.isUnarmed || action.caster.equippedWeapon.weaponType == 0) { damageBonuses += action.caster.unarmedDamage; }
+            if (action.isKick) { damageBonuses += action.caster.kickDamage; }
+            if (action.isSpell) { damageBonuses += action.caster.spellDamage; }
+            if (action.isGrapple) { damageBonuses += action.caster.grappleDamage; }
+            if (action.isHex) { damageBonuses += action.caster.hexDamage; }
+            if (action.isRubyflame) { damageBonuses += action.caster.rubyflameDamage; }
+            if (action.isNature) { damageBonuses += action.caster.natureDamage; }
+            if (action.isArcane) { damageBonuses += action.caster.arcaneDamage; }
+            if (action.elementPhysical) { damageBonuses += action.caster.physicalDamage; }
+            if (action.elementFire) { damageBonuses += action.caster.fireDamage; }
+            if (action.elementLightning) { damageBonuses += action.caster.lightningDamage; }
+            if (action.elementCorrosive) { damageBonuses += action.caster.corrosiveDamage; }
+            if (action.elementShadow) { damageBonuses += action.caster.shadowDamage; }
+
+            casterDamage *= damageBonuses / 100;
+            casterDamage *= action.caster.damageDone / 100;
+
+            CharacterAttributes newTarget = freeTargets.OrderBy(GetTargetScore).First();
+
+            return newTarget;
+
+            float GetTargetScore(CharacterAttributes character) {
+                float defenseReduction = Mathf.Min(character.defense * 0.15f, 75f);
+                float defenseFactor = 1f - (defenseReduction / 100f);
+                float resistFactor = 1f;
+
+                if (action.elementPhysical)
+                    resistFactor *= GetResistance(character.physicalResistance);
+                if (action.elementFire)
+                    resistFactor *= GetResistance(character.fireResistance);
+                if (action.elementLightning)
+                    resistFactor *= GetResistance(character.lightningResistance);
+                if (action.elementCorrosive)
+                    resistFactor *= GetResistance(character.corrosiveResistance);
+                if (action.elementShadow)
+                    resistFactor *= GetResistance(character.shadowResistance);
+
+                float damageMultiplier = defenseFactor * resistFactor * (character.damageTaken / 100f);
+
+                float score = 0f;
+                score += ((float)character.currentHealth / character.maxHealth) * 0.5f;
+                score += (character.currentHealth / damageMultiplier) * 0.001f;
+                score += RandomUtils.Float(0f, 0.2f);
+
+                Plugin.Log.Debug($"{character.characterName}: score: {score}");
+                return score;
+
+                float GetResistance( int resistValue ) {
+                    return resistValue / 100f;
+                }
+            }
         }
 
         static bool CheckCharacter(CharacterAttributes characterAttributes) {
@@ -304,15 +392,12 @@ internal class GameFixMod {
             return true;
         }
 
-        static float GetScore(CharacterAttributes characterAttributes) {
-            float score = 0f;
-
-            score += ((float)characterAttributes.currentHealth / characterAttributes.maxHealth);
-
-            score += RandomUtils.Float(0f, 0.2f);
-
-            Plugin.Log.Debug( $"{characterAttributes.characterName}: score: {score}" );
-            return score;
+        static void SetNewTarget( ref CombatAction action, CharacterAttributes newTarget) {
+            if (newTarget != action.target) {
+                Plugin.Log.Debug($"Change CombatAction target from {action.target.characterName} to {newTarget.characterName}");
+                action.target = newTarget;
+                Zessentials.Instance.battleManager.console.ConsoleWrite($"{action.caster.characterName}: will attack {action.target.characterName}");
+            }
         }
     }
 }

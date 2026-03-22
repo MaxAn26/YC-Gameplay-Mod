@@ -35,8 +35,8 @@ public class Plugin : MelonMod {
         PluginConfig = new($"{MyPluginInfo.PLUGIN_GUID}.cfg");
 
         DickStraponVisibilityMod.Load(PluginConfig);
-        EnemyBodyRandomizerMod.Load(PluginConfig);
-        GameFixMod.Load(PluginConfig);
+        CharacterBodyRandomizerMod.Load(PluginConfig);
+        GameExtendMod.Load(PluginConfig);
         RandomReverseMod.Load(PluginConfig);
         SexChoiceRealismMod.Load(PluginConfig);
 
@@ -68,40 +68,3 @@ public class Plugin : MelonMod {
         base.OnPreferencesSaved();
     }
 }
-/*
-[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
-public class Plugin : BasePlugin {
-    internal static new ManualLogSource Log;
-    internal static string PluginAssets;
-    internal static string PluginConfigs;
-    internal static string PluginResources;
-    internal static Harmony Harmony = new(MyPluginInfo.PLUGIN_GUID);
-
-    public override void Load() {
-        // Plugin startup logic
-        Log = base.Log;
-        string baseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        PluginAssets = Path.Combine(baseDirectory, "Assets");
-        PluginConfigs = Path.Combine(baseDirectory, "Configs");
-        PluginResources = Path.Combine(baseDirectory, "Resources");
-
-        DickStraponVisibilityMod.Load(Config);
-        RandomReverseMod.Load(Config);
-        SexChoiceRealismMod.Load(Config);
-
-        Harmony.PatchAll(typeof(BattleManagerPatch));
-        Harmony.PatchAll(typeof(CharacterSexPatch));
-        Harmony.PatchAll(typeof(SexEncounterPatch));
-
-        SceneManager.sceneLoaded += (UnityAction<Scene, LoadSceneMode>)OnSceneLoaded;
-        Log.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
-        Log.Info($"Scene loaded: Name: {scene.name}, BuildIndex: {scene.buildIndex}");
-        if (scene.buildIndex >= 2) {
-            SexChoiceRealismMod.Prepare();
-        }
-    }
-}
-*/

@@ -8,7 +8,7 @@
 			https://api.nuget.org/v3/index.json;
 			https://nuget.samboy.dev/v3/index.json
 		</RestoreAdditionalProjectSources>
-		<RootNamespace>YC.Unloader</RootNamespace>
+		<RootNamespace>YC.GameTrainerMod</RootNamespace>
 		<DebugType>embedded</DebugType>
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
@@ -20,8 +20,8 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<AssemblyName>YC.Unloader</AssemblyName>
-		<Description>YC Unloader</Description>
+		<AssemblyName>YC.GameTrainerMod</AssemblyName>
+		<Description>YC.Game Trainer Mod</Description>
 		<Product>$(Description)</Product>
 		<Authors>BoL4oNoK</Authors>
 		<Copyright>Copyright © BoL4oNoK $([System.DateTime]::UtcNow.ToString(yyyy))</Copyright>
@@ -31,15 +31,6 @@
 		<GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
 		<Deterministic>false</Deterministic>
 	</PropertyGroup>
-
-	<ItemDefinitionGroup>
-		<PackageReference>
-			<PrivateAssets>all</PrivateAssets>
-		</PackageReference>
-		<Reference>
-			<Private>false</Private>
-		</Reference>
-	</ItemDefinitionGroup>
 
 	<ItemGroup>
 		<PackageReference Include="LavaGang.MelonLoader" Version="0.7.2" />
@@ -55,18 +46,29 @@
 			<HintPath>..\Libs\0Harmony.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
+		<Reference Include="Assembly-CSharp">
+			<HintPath>..\Libs\Assembly-CSharp.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Il2Cppmscorlib">
+			<HintPath>..\Libs\Il2Cppmscorlib.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
 		<Reference Include="Il2CppInterop.Runtime">
 			<HintPath>..\Libs\Il2CppInterop.Runtime.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
-		<Reference Include="Assembly-CSharp">
-			<HintPath>..\Libs\Assembly-CSharp.dll</HintPath>
-		</Reference>
-		<Reference Include="Il2Cppmscorlib">
-			<HintPath>..\Libs\Il2Cppmscorlib.dll</HintPath>
-		</Reference>
 		<Reference Include="UnityEngine.CoreModule">
 			<HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.IMGUIModule">
+			<HintPath>..\Libs\UnityEngine.IMGUIModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.InputLegacyModule">
+			<HintPath>..\Libs\UnityEngine.InputLegacyModule.dll</HintPath>
+			<Private>false</Private>
 		</Reference>
 	</ItemGroup>
 

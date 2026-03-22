@@ -10,7 +10,7 @@ namespace YC.GameplayMod.Patches;
 internal class SexEncounterPatch {
     internal static bool Prepare() {
         try {
-            if (!SexChoiceRealismMod.IsModActive && !DickStraponVisibilityMod.IsModActive && !GameFixMod.IsModActive)
+            if (!SexChoiceRealismMod.IsModActive && !DickStraponVisibilityMod.IsModActive && !GameExtendMod.IsModActive)
                 return false;
 
             return true;
@@ -35,15 +35,15 @@ internal class SexEncounterPatch {
     [HarmonyPrefix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.CounterAction))]
-    static bool SexEncounterCounterActionPrefix(SexEncounter __instance, bool __runOriginal, ref bool __0, ref int __1) {
-        int newSexId;
-        if (__0)
-            newSexId = SexChoiceRealismMod.GetSexId(__instance.TargetSex, __instance.CasterSex, __instance.IsThreesome ? __instance.AssistSex : null);
+    static bool SexEncounterCounterActionPrefix(SexEncounter __instance, bool __runOriginal, ref bool CasterChanged, ref int newSexID) {
+        int SexId;
+        if (CasterChanged)
+            SexId = SexChoiceRealismMod.GetSexId(__instance.TargetSex, __instance.CasterSex, __instance.IsThreesome ? __instance.AssistSex : null);
         else
-            newSexId = SexChoiceRealismMod.GetSexId(__instance.CasterSex, __instance.TargetSex, __instance.IsThreesome ? __instance.AssistSex : null);
+            SexId = SexChoiceRealismMod.GetSexId(__instance.CasterSex, __instance.TargetSex, __instance.IsThreesome ? __instance.AssistSex : null);
 
-        if (newSexId > 0)
-            __1 = newSexId;
+        if (SexId > 0)
+            newSexID = SexId;
 
         if (!__runOriginal)
             return false;
@@ -54,11 +54,11 @@ internal class SexEncounterPatch {
     [HarmonyPrefix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.JoinThreesome))]
-    static bool SexEncounterJoinThreesomePrefix(SexEncounter __instance, bool __runOriginal, ref CharacterAttributes __0, ref int __1) {
+    static bool SexEncounterJoinThreesomePrefix(SexEncounter __instance, bool __runOriginal, ref CharacterAttributes character, ref int newSexID) {
         if (!__runOriginal)
             return false;
 
-        if (GameFixMod.SexEncounterJoinThreesome(__instance, __0, __1))
+        if (GameExtendMod.SexEncounterJoinThreesome(__instance, character, newSexID))
             return false;
 
         return true;

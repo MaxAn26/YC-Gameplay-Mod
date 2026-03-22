@@ -15,7 +15,7 @@ using YC.GameplayMod.Components;
 using YC.GameplayMod.Models;
 
 namespace YC.GameplayMod.Mods;
-public class EnemyBodyRandomizerMod {
+public class CharacterBodyRandomizerMod {
     #region Configuration
     internal static MelonPreferences_Entry<bool> Enabled;
     internal static MelonPreferences_Entry<bool> RandomizeCompanions;
@@ -33,13 +33,13 @@ public class EnemyBodyRandomizerMod {
 
     public static void Load(PluginConfig config) {
         try {
-            Enabled = config.Entry(nameof(EnemyBodyRandomizerMod), nameof(Enabled), false, 
+            Enabled = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(Enabled), false, 
                 "Activates the modification", new PluginConfig.AcceptableValueList<bool>([true, false]));
-            RandomizeCompanions = config.Entry(nameof(EnemyBodyRandomizerMod), nameof(RandomizeCompanions), false, 
+            RandomizeCompanions = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(RandomizeCompanions), false, 
                 "Randomize player companions", new PluginConfig.AcceptableValueList<bool>([true, false]));
-            ChanceForFuta = config.Entry(nameof(EnemyBodyRandomizerMod), nameof(ChanceForFuta), 35, 
+            ChanceForFuta = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(ChanceForFuta), 35, 
                 "Chance for female character with active or mixed role become futanari", new PluginConfig.AcceptableValueRange<int>(0, 100));
-            ChanceForFullFuta = config.Entry(nameof(EnemyBodyRandomizerMod), nameof(ChanceForFullFuta), 50, 
+            ChanceForFullFuta = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(ChanceForFullFuta), 50, 
                 "Chance for female futa character get full futa (dick + balls)", new PluginConfig.AcceptableValueRange<int>(0, 100));
 
         } catch (Exception ex) {

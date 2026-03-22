@@ -53,9 +53,9 @@ internal class BattleManagerPatch {
     [HarmonyPrefix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.AssistAlly))]
-    static bool BattleManagerAssistAllyPrefix(bool __runOriginal, ref CombatAction __0) {
-        if (__0 is not null) {
-            GameFixMod.BattleManagerAssistAlly(ref __0);
+    static bool BattleManagerAssistAllyPrefix(bool __runOriginal, ref CombatAction action) {
+        if (action is not null) {
+            GameExtendMod.BattleManagerAssistAlly(ref action);
         }
 
         if (!__runOriginal)
@@ -67,11 +67,11 @@ internal class BattleManagerPatch {
     [HarmonyPrefix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.ExecuteAction))]
-    static bool BattleManagerExecuteActionPrefix(bool __runOriginal, CombatAction __0) {
-        if (__0.actionType is 1 or 2)
-            GameFixMod.BattleManagerExecuteAction(ref __0);
+    static bool BattleManagerExecuteActionPrefix(bool __runOriginal, CombatAction action) {
+        if (action.actionType is 1 or 2)
+            GameExtendMod.BattleManagerExecuteAction(ref action);
 
-        Plugin.Log.Debug($"Execute Action: {__0.actionName}, Caster: {__0.caster.characterName}, Target: {__0.target?.characterName}");
+        Plugin.Log.Debug($"Execute Action: {action.actionName}, Caster: {action.caster.characterName}, Target: {action.target?.characterName}");
 
         if (!__runOriginal)
             return false;
