@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using BaseMod.Core;
 using BaseMod.Core.Extensions;
@@ -11,7 +12,6 @@ using MelonLoader;
 
 using UnityEngine;
 
-using YC.GameplayMod.Components;
 using YC.GameplayMod.Models;
 
 namespace YC.GameplayMod.Mods;
@@ -25,6 +25,9 @@ public class CharacterBodyRandomizerMod {
 
     #region States
     internal static bool IsModActive => Enabled.Value;
+    internal static BodyRestrictions BodyRestrictions { get; private set; } = new();
+    internal static List<BodyProfile> BodyProfiles { get; private set; } = [];
+    internal static List<EnemyEthnicity> EnemyEthnicities { get; private set; } = [];
     #endregion
 
     #region Storage
@@ -42,1090 +45,1312 @@ public class CharacterBodyRandomizerMod {
             ChanceForFullFuta = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(ChanceForFullFuta), 50, 
                 "Chance for female futa character get full futa (dick + balls)", new PluginConfig.AcceptableValueRange<int>(0, 100));
 
+            if (Enabled.Value) {
+                if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "BodyRestrictions.json", out BodyRestrictions bodyRestrictions)) {
+                    bodyRestrictions = GetBodyRestrictions();
+                    JsonUtils.TrySerialize(Plugin.PluginResources, "BodyRestrictions.json", bodyRestrictions);
+                }
+
+                BodyRestrictions = bodyRestrictions;
+
+                if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "BodyProfileWeights.json", out List<BodyProfile> profiles)) {
+                    profiles = GetBodyProfiles();
+                    JsonUtils.TrySerialize(Plugin.PluginResources, "BodyProfileWeights.json", profiles);
+                }
+
+                BodyProfiles.AddRange(profiles);
+
+                if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "EnemyEthnicities.json", out List<EnemyEthnicity> ethnicities)) {
+                    ethnicities = GetEnemyEthnicities();
+                    JsonUtils.TrySerialize(Plugin.PluginResources, "EnemyEthnicities.json", ethnicities);
+                }
+
+                foreach (var ethnicity in ethnicities) {
+                    BodyProfiles.ForEach(profile => {
+                        if (ethnicity.BodyWeights.TryGetValue(profile.Name, out int weight))
+                            ethnicity.BodyProfileWeights.Add(profile, weight);
+                    });
+                }
+
+                EnemyEthnicities.AddRange(ethnicities);
+            }
+
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
         }
     }
 
-    public static void Apply(CombatEnemyManager combatEnemyManager, CharacterSex characterSex, Wardrobe wardrobe) {
+    public static void Randomize(CombatEnemyManager combatEnemyManager, CharacterSex characterSex) {
         try {
             if (!Enabled.Value)
                 return;
 
-            if (Character.adultSettingsDATA.EREnabled || wardrobe.enemyData is null)
+            if (Character.adultSettingsDATA.EREnabled || characterSex.characterAttributes is null)
                 return;
 
-            if (combatEnemyManager.requiredAllies.Contains(characterSex.characterName) && !RandomizeCompanions.Value) {
-                SetEnemyDickType(wardrobe, characterSex);
-                CheckHat(wardrobe);
+            Wardrobe wardrobe = characterSex.wardrobe;
+            var wardrobe2 = combatEnemyManager.wardrobe;
+            if (wardrobe?.enemyData is null || wardrobe2 is null)
                 return;
+
+            if (!combatEnemyManager.requiredAllies.Contains( characterSex.characterName ) || RandomizeCompanions.Value) {
+                Material skin   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[0]);
+                Material face   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[1]);
+                Material eyes   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[2]);
+                Material beard  = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[3]);
+
+                var materials = wardrobe.SkinCharacter.materials;
+                materials[0] = skin;
+                materials[1] = face;
+                materials[2] = eyes;
+                materials[3] = beard;
+                wardrobe.SkinCharacter.materials = materials;
+
+                var ethnicity = GetEnemyEthnicity(wardrobe.enemyData.statsDATA.EnemyEthnicity);
+                var profile = GetBodyProfile(ethnicity.BodyProfileWeights);
+                var body = CalculateBody(profile, characterSex.IsMale);
+
+                Plugin.Log.Info($"{characterSex.characterName}: Ethnicity: {ethnicity.Name}, Profile: {profile.Name}, {body}");
+
+                #region Character skin
+                Color skinColor = ethnicity.SkinTones.Count > 0 
+                    ? ethnicity.SkinTones.RandomItem().ToUnityColor() 
+                    : RandomUtils.Item([.. combatEnemyManager.SkinTones]);
+
+                Plugin.Log.Info($"{wardrobe.characterSex.characterName}: skin color: {skinColor}");
+
+                wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Albedo_Tint", skinColor);
+                #endregion Character skin
+
+                #region Character hair
+                /*if (wardrobe.HairMeshes.Count > 0) {
+                    CheckHat(ref wardrobe);
+
+                    var hairMesh = wardrobe.characterSex.IsMale
+                        ? RandomUtils.Int32( 0, 15 )
+                        : RandomUtils.Int32( 16, wardrobe.HairMeshes.Count - 1 );
+
+                    if (wardrobe.HairMeshFilter.mesh != wardrobe.HatHair)
+                        wardrobe.HairMeshFilter.mesh = wardrobe.HairMeshes[hairMesh];
+                }
+                Material hairMat = UnityEngine.Object.Instantiate(wardrobe.HairMat);
+                wardrobe.HairMeshRenderer.sharedMaterial = hairMat;
+                wardrobe.HairMeshRenderer.sharedMaterial.SetFloat("_AlphaClipThreshold", 0.0f);
+                wardrobe.HairMeshRenderer.sharedMaterial.SetFloat("_AnisotropyValue", RandomUtils.Float(0.5f, 0.95f));
+
+                Color hairColor = Color.black;
+                if (ethnicity.HairColors.Count > 0) {
+                    hairColor = ethnicity.HairColors.RandomItem().ToUnityColor();
+                } else {
+                    int hairId = RandomUtils.Chance(15)
+                            ? RandomUtils.Int32(29, combatEnemyManager.HairColors.Count - 1)
+                            : RandomUtils.Int32(28);
+
+                    hairColor = combatEnemyManager.HairColors[hairId];
+                }
+
+                Plugin.Log.Info($"{wardrobe.characterSex.characterName}: hair color: {hairColor}");
+
+                wardrobe.HairMeshRenderer.sharedMaterial.SetColor("_Tip_Color", hairColor);
+                wardrobe.SkinCharacter.sharedMaterials[3].SetColor("_BaseColor", hairColor); */   // beard color
+                Color hairColor = Color.black;
+                #endregion Character hair
+
+                #region Character face
+                IDictionary<int, float> faceStyle = GetFaceStyle(ethnicity.FaceStyle);
+                foreach (var (index, value) in faceStyle) {
+                    wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
+                }
+
+                IDictionary<int, float> noseStyle = GetNoseStyle(ethnicity.NoseStyle);
+                foreach (var (index, value) in noseStyle) {
+                    wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
+                }
+
+                IDictionary<int, float> browStyle = GetBrowStyle(ethnicity.BrowStyle);
+                foreach (var (index, value) in browStyle) {
+                    wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
+                }
+
+                IDictionary<int, float> mouthStyle = GetMouthStyle(ethnicity.MouthStyle);
+                foreach (var (index, value) in mouthStyle) {
+                    wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
+                }
+
+                IDictionary<int, float> mouthLength = GetMouthLength(ethnicity.MouthLength);
+                foreach (var (index, value) in mouthLength) {
+                    wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
+                }
+
+                IDictionary<int, float> lipsForward = GetLipsForward(ethnicity.LipsForward);
+                foreach (var (index, value) in lipsForward) {
+                    wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
+                }
+
+                IDictionary<int, float> lipsSize = GetLipsSize(ethnicity.LipsSize);
+                foreach (var (index, value) in lipsSize) {
+                    wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
+                }
+
+                IDictionary<int, float> earsStype = GetEarsStyle(ethnicity.EarsStyle);
+                foreach (var (index, value) in earsStype) {
+                    wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
+                }
+
+                wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Albedo_Tint", skinColor);
+                wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask1_Gchannel_ColorAmountA", new Color { r = 0.596f, g = 0f, b = 0.129f, a = GetSkewedValue(0.5f) }); // freckless
+                #endregion Character face
+
+                #region Character eyes
+                IDictionary<int, float> eyesStyle = GetEyesStyle(ethnicity.EyesStyle);
+                foreach (var (index, value) in eyesStyle) {
+                    wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
+                }
+
+                Color eyesColor = Color.black;
+                if (ethnicity.EyesColors.Count > 0) {
+                    eyesColor = ethnicity.EyesColors.RandomItem().ToUnityColor();
+                } else {
+                    int eyesId = RandomUtils.Chance(15)
+                        ? RandomUtils.Int32(21, combatEnemyManager.EyeColors.Count - 1)
+                        : RandomUtils.Int32(20);
+
+                    eyesColor = combatEnemyManager.EyeColors[eyesId];
+                }
+
+                Plugin.Log.Info($"{wardrobe.characterSex.characterName}: eyes color: {eyesColor}");
+
+                wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisBaseColor", eyesColor);
+                wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisExtraColorAmount", eyesColor);
+                #endregion Character eyes
+
+                #region Character body
+                wardrobe.SkinCharacter.materials[0].SetFloat("_FinalNormalMapPower", body.Muscle);
+                float smoothness = RandomUtils.Float(0.0f, 0.9f);
+                wardrobe.SkinCharacter.materials[0].SetFloat("_SmoothnessDeviate", smoothness);
+                wardrobe.SkinCharacter.materials[1].SetFloat("_SmoothnessDeviate", smoothness);
+                wardrobe.SkinDick.material.SetFloat("_SmoothnessDeviate", smoothness);
+
+                if (!characterSex.IsMale) {
+                    int ind = Math.Clamp(body.Areola, 0, wardrobe2.MakeupBodyTex.Count - 1);
+                    wardrobe.SkinCharacter.materials[0].SetTexture("_MakeUpMask1_RGB", wardrobe2.MakeupBodyTex[ind]); // текстура сосков
+
+                    Color.RGBToHSV(skinColor, out float skinH, out float skinS, out float skinV);
+
+                    float areolaH = skinH - RandomUtils.Float(0.1f, 0.5f);
+                    float areolaS = skinS + RandomUtils.Float(0.1f, 0.5f);
+                    float areolaV = skinV - RandomUtils.Float(0.1f, 0.5f);
+
+                    Color areolaColor = Color.HSVToRGB(areolaH, areolaS, areolaV);
+                    areolaColor.a = RandomUtils.Int32(60, 100) / 100f;
+                    wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Bchannel_ColorAmountA", areolaColor);
+                }
+
+                Plugin.Log.Debug($"{characterSex.characterName} set body data...");
+                var back = new Vector3 {
+                    x = body.Torso,
+                    y = body.Torso,
+                    z = body.Torso
+                };
+                wardrobe.Back.transform.localScale = back;
+
+                var waist = new Vector3 {
+                    x = body.Hips,
+                    y = body.Hips,
+                    z = body.Hips
+                };
+                wardrobe.Waist.transform.localScale = waist;
+
+                var belly = new Vector3 {
+                    x = body.Belly,
+                    y = body.Belly,
+                    z = body.Belly
+                };
+                wardrobe.Belly.transform.localScale = belly;
+
+                var arms = new Vector3 {
+                    x = body.Arms,
+                    y = body.Arms,
+                    z = body.Arms
+                };
+                wardrobe.LeftArm.transform.localScale = arms;
+                wardrobe.RightArm.transform.localScale = arms;
+
+                var biceps = new Vector3 {
+                    x = body.Biceps,
+                    y = body.Biceps,
+                    z = body.Biceps
+                };
+                wardrobe.LeftShoulder.transform.localScale = biceps;
+                wardrobe.RightShoulder.transform.localScale = biceps;
+
+                var thighs = new Vector3 {
+                    x = body.Thighs,
+                    y = body.Thighs,
+                    z = body.Thighs
+                };
+                wardrobe.LeftThigh.transform.localScale = thighs;
+                wardrobe.RightThigh.transform.localScale = thighs;
+
+                var calves = new Vector3 {
+                    x = body.Calves,
+                    y = body.Calves,
+                    z = body.Calves
+                };
+                wardrobe.LeftLeg.transform.localScale = calves;
+                wardrobe.RightLeg.transform.localScale = calves;
+
+                var boobs = new Vector3 {
+                    x = body.Boobs,
+                    y = body.Boobs,
+                    z = body.Boobs
+                };
+                wardrobe.LeftBoob.transform.localScale = boobs;
+                wardrobe.RightBoob.transform.localScale = boobs;
+
+                var booty = new Vector3 {
+                    x = body.Booty,
+                    y = body.Booty,
+                    z = body.Booty
+                };
+                wardrobe.LeftBooty.transform.localScale = booty;
+                wardrobe.RightBooty.transform.localScale = booty;
+
+                var dick = new Vector3 {
+                    x = body.Dick,
+                    y = body.Dick,
+                    z = body.Dick
+                };
+                wardrobe.Dick.transform.localScale = dick;
+                characterSex.DickSize = body.Dick;
+
+                Plugin.Log.Debug($"{characterSex.characterName} end set body");
+                #endregion Character body
+
+                #region Character make up
+                if (!characterSex.IsMale) {
+                    Color.RGBToHSV(skinColor, out float sh, out float ss, out float sv);
+                    Color.RGBToHSV(hairColor, out float hh, out float hs, out float hv);
+                    Color.RGBToHSV(eyesColor, out float eh, out float es, out float ev);
+
+                    int skinTone = 2; // neutral tone
+                    float score = 0f;
+                    if (sh < 0.1f || sh > 0.9f)
+                        score += 0.5f; // красноватый → warm
+                    if (sh > 0.5f && sh < 0.75f)
+                        score -= 0.5f; // синеватый → cool
+
+                    // --- волосы ---
+                    if (hv < 0.3f)
+                        score -= 0.3f; // тёмные → чаще cool
+                    if (hh > 0.05f && hh < 0.15f)
+                        score += 0.3f; // рыжие/золотые → warm
+
+                    // --- глаза ---
+                    if (eh > 0.5f && eh < 0.7f)
+                        score -= 0.3f; // синие
+                    if (eh > 0.2f && eh < 0.4f)
+                        score += 0.2f; // зелёные
+
+                    if (score > 0.2f)
+                        skinTone = 3;   // warm tone
+                    if (score < -0.2f)
+                        skinTone = 1;   // cool tone
+
+                    float contrast = Mathf.Abs(sv - hv);
+                    float intensity = Mathf.Lerp(0.3f, 1.0f, contrast);
+
+                    // Eyeshadow
+                    float h = (eh + 0.5f) % 1f;
+                    if (skinTone == 3)
+                        h += 0.05f;
+                    else if (skinTone == 1)
+                        h -= 0.05f;
+
+                    float s = RandomUtils.Float(0.4f, 0.8f);
+                    float v = RandomUtils.Float(0.5f, 0.9f);
+                    Color eyeshadowColor = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s * intensity), Mathf.Clamp01(v));
+
+                    // eye liner
+                    s *= 0.5f;
+                    v *= 0.3f;
+                    Color eyelinerColor = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s), Mathf.Clamp01(v));
+
+                    // lipstic
+                    h = skinTone switch {
+                        3 => Mathf.Lerp(sh, 0.03f, 0.7f),
+                        1 => Mathf.Lerp(sh, 0.97f, 0.7f),
+                        _ => Mathf.Lerp(sh, 0.0f, 0.5f)
+                    };
+                    s = Mathf.Lerp(0.5f, 0.9f, 1f - ss);
+                    v = Mathf.Lerp(0.6f, 0.9f, 1f - sv);
+
+                    h += RandomUtils.Float(-0.02f, 0.02f);
+                    s *= RandomUtils.Float(0.9f, 1.1f);
+                    v *= RandomUtils.Float(0.9f, 1.1f);
+
+                    // --- 5. Clamp ---
+                    h = Mathf.Repeat(h, 1f);
+                    s = Mathf.Clamp01(s);
+                    v = Mathf.Clamp01(v);
+
+                    Color lipstic = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s * intensity), Mathf.Clamp01(v));
+
+                    // nails
+                    h += RandomUtils.Float(-0.05f, 0.05f);
+                    h = Mathf.Repeat(h, 1f);
+
+                    if (RandomUtils.Chance(0.5))
+                        v *= 0.7f;
+
+                    if (RandomUtils.Chance(0.3))
+                        s *= 1.2f;
+
+                    Color nailColor = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s * intensity), Mathf.Clamp01(v));
+
+                    wardrobe.SkinCharacter.sharedMaterials[1].SetTexture("_MakeUpMask1_RGB", wardrobe2.MakeupTex[RandomUtils.Int32(wardrobe2.MakeupTex.Count - 2)]);    // eye liner
+                    wardrobe.SkinCharacter.sharedMaterials[1].SetTexture("_MakeUpMask2_RGB", wardrobe2.MakeupTex2[RandomUtils.Int32(wardrobe2.MakeupTex2.Count - 1)]);  // shadow
+
+                    wardrobe.SkinCharacter.sharedMaterials[1].SetFloat("_GlossAdjust_Mask2Bchannel", RandomUtils.Float(0.0f, 1.0f));
+
+                    wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Rchannel_ColorAmountA", nailColor); // nails
+                    wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Gchannel_ColorAmountA", lipstic); // tatoo
+                    wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask1_Rchannel_ColorAmountA", eyelinerColor); // eye liner
+                    wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask2_Rchannel_ColorAmountA", eyeshadowColor); // eye shadows
+                    wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask2_Bchannel_ColorAmountA", lipstic);    // lipstic
+                }
+                #endregion Character make up
             }
 
-            Material skin   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[0]);
-            Material face   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[1]);
-            Material eyes   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[2]);
-            Material beard  = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[3]);
-            var materials = wardrobe.SkinCharacter.materials;
-            materials[0] = skin;
-            materials[1] = face;
-            materials[2] = eyes;
-            materials[3] = beard;
-            wardrobe.SkinCharacter.materials = materials;
+            #region Character genetals
+            if (characterSex.IsMale) {
+                wardrobe.SkinCharacter.SetBlendShapeWeight(1, 100f);
+                
+                wardrobe.SkinDick.sharedMesh = wardrobe2.DickMesh;
+                Material material = UnityEngine.Object.Instantiate(wardrobe2.DickMatM);
+                var color = wardrobe.SkinCharacter.material.GetColor("_Albedo_Tint");
+                wardrobe.SkinDick.sharedMaterial = material;
+                wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", color);
+            } else {
+                if (RandomUtils.Chance(ChanceForFuta.Value)) {
+                    Plugin.Log.Info($"{characterSex.characterName} will use a dick");
 
-            SetHair(wardrobe);
-            SetFaceSize(wardrobe, characterSex);
-            SetEnemyDickType(wardrobe, characterSex);
-            SetBodySize(wardrobe, characterSex);
-            SetColors(wardrobe);
+                    wardrobe.SkinDick.sharedMesh = RandomUtils.Chance(ChanceForFullFuta.Value) ? wardrobe2.DickMesh : wardrobe2.DickHalfMesh;
+                    Material material = UnityEngine.Object.Instantiate(wardrobe2.DickMatF);
+                    var color = wardrobe.SkinCharacter.material.GetColor("_Albedo_Tint");
+                    wardrobe.SkinDick.sharedMaterial = material;
+                    wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", color);
+                } else {
+                    Plugin.Log.Info($"{characterSex.characterName} will use strapon");
+
+                    wardrobe.SkinDick.sharedMesh = wardrobe2.StrapMesh;
+                    Material material = UnityEngine.Object.Instantiate(wardrobe2.StrapMat);
+                    wardrobe.SkinDick.sharedMaterial = material;
+                    var color = wardrobe.enemyData.customizationDATA.TorsoIntColor;
+                    wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", color);
+                }
+            }
+            #endregion Character genetals
         } catch (Exception ex) {
             Plugin.Log.Error(ex.Message);
-            return;
         }
     }
 
-    public static void SetHair(Wardrobe wardrobe) {
-        if (wardrobe.HairMeshes.Count <= 0)
-            return;
-
-        CheckHat(wardrobe);
-
-        var hairMesh = wardrobe.characterSex.IsMale
-            ? RandomUtils.Int32( 0, 16 )
-            : RandomUtils.Int32( 17, wardrobe.HairMeshes.Count - 1 );
-
-
-        if (wardrobe.HairMeshFilter.mesh != wardrobe.HatHair)             wardrobe.HairMeshFilter.mesh = wardrobe.HairMeshes[hairMesh];
-        wardrobe.HairMeshRenderer.sharedMaterial.SetFloat("_AlphaClipThreshold", 0.0f);
-        wardrobe.HairMeshRenderer.sharedMaterial.SetFloat("_AnisotropyValue", RandomUtils.Float(0.5f, 0.95f));
-    }
-
-    public static void SetFaceSize(Wardrobe enemyWardrobe, CharacterSex characterSex) {
-        #region Face Size
-        int face = RandomUtils.Int32(0, 20);
-        Plugin.Log.Info( $"Face: {face}");
-        switch (face) {
+    private static IDictionary<int, float> GetFaceStyle(List<int> faces ) {
+        int id = faces.Count > 0 ? faces.RandomItem() : RandomUtils.Int32(0, 20);
+        Dictionary<int, float> values = [];
+        switch (id) {
             case 1:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 35.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 0.0f);
                 break;
             case 2:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 70.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 0.0f);
                 break;
             case 3:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 100.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 0.0f);
                 break;
             case 4:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 35.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 0.0f);
                 break;
             case 5:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 70.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 0.0f);
                 break;
             case 6:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 100.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 0.0f);
                 break;
             case 7:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 35.0f);
+                values.Add(5, 0.0f);
                 break;
             case 8:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 70.0f);
+                values.Add(5, 0.0f);
                 break;
             case 9:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 100.0f);
+                values.Add(5, 0.0f);
                 break;
             case 10:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 35.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 35.0f);
                 break;
             case 11:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 70.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 70.0f);
                 break;
             case 12:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 100.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 100.0f);
                 break;
             case 13:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 35.0f);
+                values.Add(3, 35.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 0.0f);
                 break;
             case 14:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 50.0f);
+                values.Add(3, 50.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 0.0f);
                 break;
             case 15:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 35.0f);
+                values.Add(4, 35.0f);
+                values.Add(5, 0.0f);
                 break;
             case 16:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 50.0f);
+                values.Add(4, 50.0f);
+                values.Add(5, 0.0f);
                 break;
             case 17:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 35.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 35.0f);
+                values.Add(5, 35.0f);
                 break;
             case 18:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 50.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 50.0f);
+                values.Add(5, 50.0f);
                 break;
             case 19:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 35.0f);
+                values.Clear();
+                values.Add(2, 35.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 35.0f);
                 break;
             case 20:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 50.0f);
+                values.Clear();
+                values.Add(2, 50.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 50.0f);
                 break;
             default:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(2, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(3, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(4, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(5, 0.0f);
+                values.Clear();
+                values.Add(2, 0.0f);
+                values.Add(3, 0.0f);
+                values.Add(4, 0.0f);
+                values.Add(5, 0.0f);
                 break;
         }
-        #endregion
 
-        #region Eyes Style
-        int eyesStyle = RandomUtils.Int32(0, 20);
-        Plugin.Log.Info($"Eyes Style: {eyesStyle}");
-        switch (eyesStyle) {
+        return values;
+    }
+
+    private static IDictionary<int, float> GetEyesStyle(List<int> eyes) {
+        int id = eyes.Count > 0 ? eyes.RandomItem() : RandomUtils.Int32(0, 20);
+        Dictionary<int, float> values = [];
+        switch (id) {
             case 1:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 35.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 0.0f);
                 break;
             case 2:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 70.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 0.0f);
                 break;
             case 3:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 100.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 0.0f);
                 break;
             case 4:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 35.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 0.0f);
                 break;
             case 5:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 70.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 0.0f);
                 break;
             case 6:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 100.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 0.0f);
                 break;
             case 7:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 35.0f);
+                values.Add(9, 0.0f);
                 break;
             case 8:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 70.0f);
+                values.Add(9, 0.0f);
                 break;
             case 9:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 100.0f);
+                values.Add(9, 0.0f);
                 break;
             case 10:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 35.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 35.0f);
                 break;
             case 11:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 70.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 70.0f);
                 break;
             case 12:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 100.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 100.0f);
                 break;
             case 13:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 35.0f);
+                values.Add(7, 35.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 0.0f);
                 break;
             case 14:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 50.0f);
+                values.Add(7, 50.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 0.0f);
                 break;
             case 15:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 35.0f);
+                values.Add(8, 35.0f);
+                values.Add(9, 0.0f);
                 break;
             case 16:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 50.0f);
+                values.Add(8, 50.0f);
+                values.Add(9, 0.0f);
                 break;
             case 17:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 35.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 35.0f);
+                values.Add(9, 35.0f);
                 break;
             case 18:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 50.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 50.0f);
+                values.Add(9, 50.0f);
                 break;
             case 19:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 35.0f);
+                values.Add(6, 35.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 35.0f);
                 break;
             case 20:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 50.0f);
+                values.Add(6, 50.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 50.0f);
                 break;
             default:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(6, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(7, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(8, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(9, 0.0f);
+                values.Add(6, 0.0f);
+                values.Add(7, 0.0f);
+                values.Add(8, 0.0f);
+                values.Add(9, 0.0f);
                 break;
         }
-        #endregion
 
-        #region Nose Style
-        int noseStyle = RandomUtils.Int32(0, 12);
-        Plugin.Log.Info($"Nose Style: {noseStyle}");
-        switch (noseStyle) {
+        return values;
+    }
+
+    private static IDictionary<int, float> GetNoseStyle(List<int> noses) {
+        int id = noses.Count > 0 ? noses.RandomItem() : RandomUtils.Int32(0, 12);
+        Dictionary<int, float> values = [];
+        switch (id) {
             case 1:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 35.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 0.0f);
                 break;
             case 2:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 70.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 0.0f);
                 break;
             case 3:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 100.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 0.0f);
                 break;
             case 4:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 35.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 0.0f);
                 break;
             case 5:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 70.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 0.0f);
                 break;
             case 6:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 100.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 0.0f);
                 break;
             case 7:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 35.0f);
+                values.Add(14, 0.0f);
                 break;
             case 8:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 70.0f);
+                values.Add(14, 0.0f);
                 break;
             case 9:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 100.0f);
+                values.Add(14, 0.0f);
                 break;
             case 10:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 35.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 35.0f);
                 break;
             case 11:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 70.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 70.0f);
                 break;
             case 12:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 100.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 100.0f);
                 break;
             default:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(11, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(12, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(13, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(14, 0.0f);
+                values.Add(11, 0.0f);
+                values.Add(12, 0.0f);
+                values.Add(13, 0.0f);
+                values.Add(14, 0.0f);
                 break;
         }
-        #endregion
+        return values;
+    }
 
-        #region Brow Style
-        int browStyle = RandomUtils.Int32(0, 8);
-        Plugin.Log.Info($"Brow Style: {browStyle}");
-        switch (browStyle) {
+    private static IDictionary<int, float> GetBrowStyle(List<int> brows) {
+        int id = brows.Count > 0 ? brows.RandomItem() : RandomUtils.Int32(0, 8);
+        Dictionary<int, float> values = [];
+        switch (id) {
             case 1:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(24, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(25, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(26, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(27, 0.0f);
+                values.Add(24, 50.0f);
+                values.Add(25, 0.0f);
+                values.Add(26, 0.0f);
+                values.Add(27, 0.0f);
                 break;
             case 2:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(24, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(25, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(26, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(27, 0.0f);
+                values.Add(24, 100.0f);
+                values.Add(25, 0.0f);
+                values.Add(26, 0.0f);
+                values.Add(27, 0.0f);
                 break;
             case 3:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(24, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(25, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(26, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(27, 0.0f);
+                values.Add(24, 0.0f);
+                values.Add(25, 50.0f);
+                values.Add(26, 0.0f);
+                values.Add(27, 0.0f);
                 break;
             case 4:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(24, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(25, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(26, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(27, 0.0f);
+                values.Add(24, 0.0f);
+                values.Add(25, 100.0f);
+                values.Add(26, 0.0f);
+                values.Add(27, 0.0f);
                 break;
             case 5:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(24, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(25, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(26, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(27, 0.0f);
+                values.Add(24, 0.0f);
+                values.Add(25, 0.0f);
+                values.Add(26, 50.0f);
+                values.Add(27, 0.0f);
                 break;
             case 6:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(24, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(25, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(26, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(27, 0.0f);
+                values.Add(24, 0.0f);
+                values.Add(25, 0.0f);
+                values.Add(26, 100.0f);
+                values.Add(27, 0.0f);
                 break;
             case 7:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(24, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(25, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(26, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(27, 50.0f);
+                values.Add(24, 0.0f);
+                values.Add(25, 0.0f);
+                values.Add(26, 0.0f);
+                values.Add(27, 50.0f);
                 break;
             case 8:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(24, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(25, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(26, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(27, 100.0f);
+                values.Add(24, 0.0f);
+                values.Add(25, 0.0f);
+                values.Add(26, 0.0f);
+                values.Add(27, 100.0f);
                 break;
             default:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(24, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(25, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(26, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(27, 0.0f);
+                values.Add(24, 0.0f);
+                values.Add(25, 0.0f);
+                values.Add(26, 0.0f);
+                values.Add(27, 0.0f);
                 break;
         }
-        #endregion
+        return values;
+    }
 
-        #region Mouth Style
-        int mouthStyle = RandomUtils.Int32(0, 20);
-        Plugin.Log.Info($"Mouth Style: {mouthStyle}");
-        switch (mouthStyle) {
+    private static IDictionary<int, float> GetMouthStyle(List<int> mouth ) {
+        int id = mouth.Count > 0 ? mouth.RandomItem() : RandomUtils.Int32(0, 20);
+        Dictionary<int, float> values = [];
+        switch (id) {
             case 1:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 35.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 0.0f);
                 break;
             case 2:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 70.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 0.0f);
                 break;
             case 3:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 100.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 0.0f);
                 break;
             case 4:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 35.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 0.0f);
                 break;
             case 5:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 70.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 0.0f);
                 break;
             case 6:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 100.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 0.0f);
                 break;
             case 7:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 35.0f);
+                values.Add(19, 0.0f);
                 break;
             case 8:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 70.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 70.0f);
+                values.Add(19, 0.0f);
                 break;
             case 9:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 100.0f);
+                values.Add(19, 0.0f);
                 break;
             case 10:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 35.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 35.0f);
                 break;
             case 11:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 70.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 70.0f);
                 break;
             case 12:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 100.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 100.0f);
                 break;
             case 13:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 35.0f);
+                values.Add(17, 35.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 0.0f);
                 break;
             case 14:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 50.0f);
+                values.Add(17, 50.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 0.0f);
                 break;
             case 15:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 35.0f);
+                values.Add(18, 35.0f);
+                values.Add(19, 0.0f);
                 break;
             case 16:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 50.0f);
+                values.Add(18, 50.0f);
+                values.Add(19, 0.0f);
                 break;
             case 17:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 35.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 35.0f);
+                values.Add(19, 35.0f);
                 break;
             case 18:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 50.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 50.0f);
+                values.Add(19, 50.0f);
                 break;
             case 19:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 35.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 35.0f);
+                values.Add(16, 35.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 35.0f);
                 break;
             case 20:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 50.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 50.0f);
+                values.Add(16, 50.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 50.0f);
                 break;
             default:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(16, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(17, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(18, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(19, 0.0f);
+                values.Add(16, 0.0f);
+                values.Add(17, 0.0f);
+                values.Add(18, 0.0f);
+                values.Add(19, 0.0f);
                 break;
         }
-        #endregion
+        return values;
+    }
 
-        #region Mouth Length
-        int mouthLenght = RandomUtils.Int32(0, 10);
-        Plugin.Log.Info($"Mouth Lenght: {mouthLenght}");
-        switch (mouthLenght) {
+    private static IDictionary<int, float> GetMouthLength(List<int> mouth) {
+        int id = mouth.Count > 0 ? mouth.RandomItem() : RandomUtils.Int32(0, 10);
+        Dictionary<int, float> values = [];
+        switch (id) {
             case 1:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 20.0f);
+                values.Add(20, 0.0f);
+                values.Add(21, 20.0f);
                 break;
             case 2:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 40.0f);
+                values.Add(20, 0.0f);
+                values.Add(21, 40.0f);
                 break;
             case 3:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 60.0f);
+                values.Add(20, 0.0f);
+                values.Add(21, 60.0f);
                 break;
             case 4:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 80.0f);
+                values.Add(20, 0.0f);
+                values.Add(21, 80.0f);
                 break;
             case 5:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 100.0f);
+                values.Add(20, 0.0f);
+                values.Add(21, 100.0f);
                 break;
             case 6:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 20.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 0.0f);
+                values.Add(20, 20.0f);
+                values.Add(21, 0.0f);
                 break;
             case 7:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 40.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 0.0f);
+                values.Add(20, 40.0f);
+                values.Add(21, 0.0f);
                 break;
             case 8:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 60.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 0.0f);
+                values.Add(20, 60.0f);
+                values.Add(21, 0.0f);
                 break;
             case 9:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 80.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 0.0f);
+                values.Add(20, 80.0f);
+                values.Add(21, 0.0f);
                 break;
             case 10:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 0.0f);
+                values.Add(20, 100.0f);
+                values.Add(21, 0.0f);
                 break;
             default:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(20, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(21, 0.0f);
+                values.Add(20, 0.0f);
+                values.Add(21, 0.0f);
                 break;
         }
-        #endregion
+        return values;
+    }
 
-        #region Lips Forward
-        int lipsForward = RandomUtils.Int32(0, 10);
-        Plugin.Log.Info($"Lips Forward: {lipsForward}");
-        switch (lipsForward) {
+    private static IDictionary<int, float> GetLipsForward(List<int> lips ) {
+        int id = lips.Count > 0 ? lips.RandomItem() : RandomUtils.Int32(0, 10);
+        Dictionary<int, float> values = [];
+        switch (id) {
             case 1:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 10.0f);
+                values.Add(35, 10.0f);
                 break;
             case 2:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 20.0f);         
+                values.Add(35, 20.0f);
                 break;
             case 3:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 30.0f);         
+                values.Add(35, 30.0f);
                 break;
             case 4:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 40.0f);         
+                values.Add(35, 40.0f);
                 break;
             case 5:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 50.0f);         
+                values.Add(35, 50.0f);
                 break;
             case 6:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 60.0f);         
+                values.Add(35, 60.0f);
                 break;
             case 7:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 70.0f);         
+                values.Add(35, 70.0f);
                 break;
             case 8:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 80.0f);         
+                values.Add(35, 80.0f);
                 break;
             case 9:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 90.0f);
+                values.Add(35, 90.0f);
                 break;
             case 10:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 100.0f);
+                values.Add(35, 100.0f);
                 break;
             default:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(35, 0.0f);         
+                values.Add(35, 0.0f);
                 break;
         }
-        #endregion
+        return values;
+    }
 
-        #region Lips Size
-        int lipsSize = RandomUtils.Int32(0, 8);
-        Plugin.Log.Info($"Lips Size: {lipsSize}");
-        switch (lipsSize) {
+    private static IDictionary<int, float> GetLipsSize(List<int> lips) {
+        int id = lips.Count > 0 ? lips.RandomItem() : RandomUtils.Int32(0, 8);
+        Dictionary<int, float> values = [];
+        switch (id) {
             case 1:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(22, 12.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(23, 12.0f);
+                values.Add(22, 12.0f);
+                values.Add(23, 12.0f);
                 break;
             case 2:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(22, 24.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(23, 24.0f);
+                values.Add(22, 24.0f);
+                values.Add(23, 24.0f);
                 break;
             case 3:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(22, 36.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(23, 36.0f);
+                values.Add(22, 36.0f);
+                values.Add(23, 36.0f);
                 break;
             case 4:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(22, 48.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(23, 48.0f);
+                values.Add(22, 48.0f);
+                values.Add(23, 48.0f);
                 break;
             case 5:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(22, 54.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(23, 54.0f);
+                values.Add(22, 54.0f);
+                values.Add(23, 54.0f);
                 break;
             case 6:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(22, 66.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(23, 66.0f);
+                values.Add(22, 66.0f);
+                values.Add(23, 66.0f);
                 break;
             case 7:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(22, 88.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(23, 88.0f);
+                values.Add(22, 88.0f);
+                values.Add(23, 88.0f);
                 break;
             case 8:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(22, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(23, 100.0f);
+                values.Add(22, 100.0f);
+                values.Add(23, 100.0f);
                 break;
             default:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(22, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(23, 0.0f);
+                values.Add(22, 0.0f);
+                values.Add(23, 0.0f);
                 break;
         }
-        #endregion
+        return values;
+    }
 
-        #region Ears Style
-        int earsStyle = enemyWardrobe.enemyData.statsDATA.EnemyEthnicity > 5 ? RandomUtils.Int32(1, 10) : 0;
-        Plugin.Log.Info($"Ears Style: {earsStyle}");
-        switch (earsStyle) {
+    private static IDictionary<int, float> GetEarsStyle( List<int> ears ) {
+        int id = ears.Count > 0 ? ears.RandomItem() : RandomUtils.Int32(0, 20);
+        Dictionary<int, float> values = [];
+        switch (id) {
             case 1:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 20.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                values.Add(28, 20.0f);
+                values.Add(29, 0.0f);
                 break;
             case 2:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 40.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                values.Add(28, 40.0f);
+                values.Add(29, 0.0f);
                 break;
             case 3:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 60.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                values.Add(28, 60.0f);
+                values.Add(29, 0.0f);
                 break;
             case 4:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 80.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                values.Add(28, 80.0f);
+                values.Add(29, 0.0f);
                 break;
             case 5:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 100.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                values.Add(28, 100.0f);
+                values.Add(29, 0.0f);
                 break;
             case 6:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 20.0f);
+                values.Add(28, 0.0f);
+                values.Add(29, 20.0f);
                 break;
             case 7:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 40.0f);
+                values.Add(28, 0.0f);
+                values.Add(29, 40.0f);
                 break;
             case 8:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 60.0f);
+                values.Add(28, 0.0f);
+                values.Add(29, 60.0f);
                 break;
             case 9:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 80.0f);
+                values.Add(28, 0.0f);
+                values.Add(29, 80.0f);
                 break;
             case 10:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 100.0f);
+                values.Add(28, 0.0f);
+                values.Add(29, 100.0f);
                 break;
             default:
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(28, 0.0f);
-                enemyWardrobe.SkinCharacter.SetBlendShapeWeight(29, 0.0f);
+                values.Add(28, 0.0f);
+                values.Add(29, 0.0f);
                 break;
         }
-        #endregion
-
-        if (characterSex.IsMale)
-            enemyWardrobe.SkinCharacter.SetBlendShapeWeight(1, 100f);
-
-        enemyWardrobe.SkinCharacter.materials[1].SetColor("_Mask1_Gchannel_ColorAmountA", new Color { r = 0.596f, g = 0f, b = 0.129f, a = GetSkewedValue(0.5f) });
+        return values;
     }
 
-    public static void SetBodySize(Wardrobe enemyWardrobe, CharacterSex characterSex) {
-        var profile = RandomUtils.Item( GetBodyProfiles());
-        float minBoobsKoeff = -0.25f;
-        float maxBoobsKoeff = 0.25f;
-        if (!characterSex.IsPlayer && !characterSex.IsMale && RandomUtils.Chance(25)) {
-            Plugin.Log.Info("Extra boobs");
-            minBoobsKoeff += 0.5f;
-            maxBoobsKoeff += 0.75f;
-        }
-
-        float minBootyKoeff = -0.25f;
-        float maxBootyKoeff = 0.25f;
-        if (!characterSex.IsPlayer && !characterSex.IsMale && RandomUtils.Chance(25)) {
-            Plugin.Log.Info("Extra booty");
-            minBootyKoeff += 0.5f;
-            maxBoobsKoeff += 0.75f;
-        }
-
-        var body = new CharacterBody {
-            Muscle  = Math.Clamp(profile.Muscle + RandomUtils.Float( -0.3f, 0.3f ) , 0.0f, 2.5f),
-            Torso   = Math.Clamp(profile.Torso + RandomUtils.Float( -(profile.Torso * 0.15f), profile.Torso * 0.15f ) , 0.3f, 2.5f ),
-            Hips    = Math.Clamp(profile.Hips + RandomUtils.Float( -(profile.Hips * 0.15f), profile.Hips * 0.15f ) , 0.3f, 3.5f ),
-            Belly   = Math.Clamp(profile.Belly + RandomUtils.Float( -(profile.Belly * 0.15f), profile.Belly * 0.15f ) , 0.3f, 4.0f ),
-            Arms    = Math.Clamp(profile.Arms + RandomUtils.Float( -(profile.Arms * 0.15f), profile.Arms * 0.15f ) , 0.3f, 5.0f ),
-            Biceps  = Math.Clamp(profile.Biceps + RandomUtils.Float( -(profile.Biceps * 0.15f), profile.Biceps * 0.15f ), 0.3f, 7.0f ),
-            Thighs  = Math.Clamp(profile.Thighs + RandomUtils.Float( -(profile.Thighs * 0.15f), profile.Thighs * 0.15f ), 0.3f, 4.5f ),
-            Calves  = Math.Clamp(profile.Calves + RandomUtils.Float( -(profile.Calves * 0.15f), profile.Calves * 0.15f ), 0.3f, 4.5f ),
-            Boobs   = characterSex.IsMale
-                        ? 1.0f
-                        : Math.Clamp(profile.Boobs + RandomUtils.Float( minBoobsKoeff, maxBoobsKoeff ) , 0.7f, 1.5f),
-            AreolaIndex = Math.Clamp(profile.AreolaSize - 1 + RandomUtils.Int32(-1, 1), 0, 7),
-            Booty   = Math.Clamp(profile.Booty + RandomUtils.Float( minBootyKoeff, maxBootyKoeff ) , 0.5f, 1.5f ),
-            Dick    = characterSex.IsMale
-                        ? Math.Clamp(profile.Dick + RandomUtils.Float( -(profile.Dick * 0.15f), profile.Dick * 0.15f ) , 0.7f, 1.5f )
-                        : Math.Clamp(profile.Dick + RandomUtils.Float( -(profile.Dick * 0.15f), profile.Dick * 0.15f ) , 0.7f, 1.5f )
-        };
-
-        Plugin.Log.Info($"Set body params for character {characterSex.characterName}. Profile: {profile.Name}");
-        enemyWardrobe.SkinCharacter.materials[0].SetFloat("_FinalNormalMapPower", body.Muscle);
-        float smoothness = RandomUtils.Float(0.0f, 0.9f);
-        enemyWardrobe.SkinCharacter.material.SetFloat("_SmoothnessDeviate", smoothness);
-        enemyWardrobe.SkinCharacter.materials[1].SetFloat("_SmoothnessDeviate", smoothness);
-        enemyWardrobe.SkinDick.material.SetFloat("_SmoothnessDeviate", smoothness);
-
-        if (!characterSex.IsMale) {
-            var wardrobe2 = GameObject.Find("WardrobeOBJ")?.GetComponentWithCast<Wardrobe2>();
-            if (wardrobe2 is not null) {
-                int ind = Math.Clamp(body.AreolaIndex, 0, wardrobe2.MakeupBodyTex.Count - 1);
-                enemyWardrobe.SkinCharacter.materials[0].SetTexture("_MakeUpMask1_RGB", wardrobe2.MakeupBodyTex[ind]); 
-            }
-        }
-
-        var back = new Vector3 {
-            x = body.Torso,
-            y = body.Torso,
-            z = body.Torso
-        };
-        enemyWardrobe.Back.transform.localScale = back;
-
-        var waist = new Vector3 {
-            x = body.Hips,
-            y = body.Hips,
-            z = body.Hips
-        };
-        enemyWardrobe.Waist.transform.localScale = waist;
-
-        var belly = new Vector3 {
-            x = body.Belly,
-            y = body.Belly,
-            z = body.Belly
-        };
-        enemyWardrobe.Belly.transform.localScale = belly;
-
-        var arms = new Vector3 {
-            x = body.Arms,
-            y = body.Arms,
-            z = body.Arms
-        };
-        enemyWardrobe.LeftArm.transform.localScale = arms;
-        enemyWardrobe.RightArm.transform.localScale = arms;
-
-        var biceps = new Vector3 {
-            x = body.Biceps,
-            y = body.Biceps,
-            z = body.Biceps
-        };
-        enemyWardrobe.LeftShoulder.transform.localScale = biceps;
-        enemyWardrobe.RightShoulder.transform.localScale = biceps;
-
-        var thighs = new Vector3 {
-            x = body.Thighs,
-            y = body.Thighs,
-            z = body.Thighs
-        };
-        enemyWardrobe.LeftThigh.transform.localScale = thighs;
-        enemyWardrobe.RightThigh.transform.localScale = thighs;
-
-        var calves = new Vector3 {
-            x = body.Calves,
-            y = body.Calves,
-            z = body.Calves
-        };
-        enemyWardrobe.LeftLeg.transform.localScale = calves;
-        enemyWardrobe.RightLeg.transform.localScale = calves;
-
-        var boobs = new Vector3 {
-            x = body.Boobs,
-            y = body.Boobs,
-            z = body.Boobs
-        };
-        enemyWardrobe.LeftBoob.transform.localScale = boobs;
-        enemyWardrobe.RightBoob.transform.localScale = boobs;
-
-        var booty = new Vector3 {
-            x = body.Booty,
-            y = body.Booty,
-            z = body.Booty
-        };
-        enemyWardrobe.LeftBooty.transform.localScale = booty;
-        enemyWardrobe.RightBooty.transform.localScale = booty;
-
-        var dick = new Vector3 {
-            x = body.Dick,
-            y = body.Dick,
-            z = body.Dick
-        };
-        enemyWardrobe.Dick.transform.localScale = dick;
-    }
-
-    public static void SetColors(Wardrobe wardrobe) {
-        var wardrobe2 = GameObject.Find("WardrobeOBJ")?.GetComponentWithCast<Wardrobe2>();
-        if (wardrobe2 is null)
-            return;
-
-        int skinId = wardrobe.enemyData.statsDATA.EnemyEthnicity switch {
-            0 => RandomUtils.Int32(13),
-            1 or 4 or 6 => RandomUtils.Int32(0, 4),
-            2 or 7 => RandomUtils.Int32(3, 8),
-            5 => RandomUtils.Int32(13, wardrobe2.SkinTones.Count - 1),
-            8 => RandomUtils.Int32(17, wardrobe2.SkinTones.Count - 1),
-            9 => RandomUtils.Int32(13, 16),
-            _ => RandomUtils.Int32(0, wardrobe2.SkinTones.Count - 1)
-        };
-
-        int makeUpId, lipsId;
-
-        switch (wardrobe.enemyData.statsDATA.EnemyMakeup) {
-            case 0 or 5 or 6:
-                makeUpId    = RandomUtils.Int32(wardrobe2.MakeupColors.Count - 1);
-                lipsId      = RandomUtils.Int32(wardrobe2.MakeupColors.Count - 1);
-                break;
-            case 2 or 3 or 4:
-                makeUpId    = RandomUtils.Int32(7);
-                lipsId      = RandomUtils.Int32(7);
-                break;
-            default:
-                makeUpId    = 0;
-                lipsId      = 0;
-                break;
-        }
-
-        int makeUpIntense = wardrobe.enemyData.statsDATA.EnemyMakeup switch {
-            0 => RandomUtils.Int32(1, 3),
-            2 or 3 or 4 => wardrobe.enemyData.statsDATA.EnemyMakeup - 1,
-            _ => 0
-        };
-
-        int eyesId = RandomUtils.Chance(15)
-            ? RandomUtils.Int32(21, wardrobe2.EyeColors.Count - 1)
-            : RandomUtils.Int32(20);
-
-        int hairId = RandomUtils.Chance(15)
-            ? RandomUtils.Int32(29, wardrobe2.HairColors.Count - 1)
-            : RandomUtils.Int32(28);
-
-        Color skinColor = wardrobe2.SkinTones[skinId];
-        Color eyesColor = wardrobe2.EyeColors[eyesId];
-        Color hairColor = wardrobe2.HairColors[hairId];
-        
-        wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Albedo_Tint", wardrobe2.SkinTones[skinId]);
-        wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Albedo_Tint", wardrobe2.SkinTones[skinId]);
-        wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask1_Rchannel_ColorAmountA", Color.black);
-
-        wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisBaseColor", eyesColor);
-        wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisExtraColorAmount", eyesColor);
-
-        wardrobe.HairMeshRenderer.sharedMaterial.SetColor("_BaseTint", hairColor);
-        wardrobe.SkinCharacter.sharedMaterials[3].SetColor("_BaseColor", hairColor);
-
-        if (!wardrobe.enemyData.isMale) {
-            Color makeUpColor = wardrobe2.MakeupColors[makeUpId];
-            Color lipsColor = wardrobe2.LipColors[lipsId];
-
-            switch (makeUpIntense) {
-                case 1:
-                    makeUpColor.a = 0.5f;
-                    lipsColor.a = 0.5f;
-                    break;
-                case 2:
-                    makeUpColor.a = 0.7f;
-                    lipsColor.a = 0.7f;
-                    break;
-                case 3:
-                    makeUpColor.a = 0.9f;
-                    lipsColor.a = 1.0f;
-                    break;
-                default:
-                    makeUpColor.a = 0f;
-                    lipsColor.a = 0f;
-                    break;
-            }
-
-            wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask2_Rchannel_ColorAmountA", makeUpColor);
-            wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Rchannel_ColorAmountA", makeUpColor);
-            wardrobe.SkinCharacter.sharedMaterials[1].SetColor("_Mask2_Bchannel_ColorAmountA", lipsColor);
-            wardrobe.SkinCharacter.sharedMaterials[1].SetFloat("_GlossAdjust_Mask2Bchannel", 0.9f);
-
-            Color.RGBToHSV(skinColor, out float skinH, out float skinS, out float skinV);
-
-            float areolaH = skinH - RandomUtils.Float(0.1f, 0.5f);
-            float areolaS = skinS + RandomUtils.Float(0.1f, 0.5f);
-            float areolaV = skinV - RandomUtils.Float(0.1f, 0.5f);
-
-            Color areolaColor = Color.HSVToRGB(areolaH, areolaS, areolaV);
-            areolaColor.a = RandomUtils.Int32(60, 100) / 100f;
-            wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Bchannel_ColorAmountA", areolaColor);
-        }
-
-        if (wardrobe.enemyData.isMale || wardrobe2 is not null && wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh) {
-            wardrobe.SkinCharacter.SetBlendShapeWeight(0, 100);
-            Material newdix = UnityEngine.Object.Instantiate(wardrobe.SkinDick.sharedMaterial);
-            wardrobe.SkinDick.sharedMaterial = newdix;
-            wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", skinColor);
-        }
-
-        CheckHat(wardrobe);
-    }
-
-    public static void SetEnemyDickType(Wardrobe wardrobe, CharacterSex characterSex) {
-        if (characterSex.IsMale)
-            return;
-
-        var wardrobe2 = GameObject.Find("WardrobeOBJ")?.GetComponentWithCast<Wardrobe2>();
-        if (wardrobe2 is null)
-            return;
-
-        if (RandomUtils.Chance(ChanceForFuta.Value)) {
-            Plugin.Log.Info($"{characterSex.characterName} will use a dick");
-
-            wardrobe.SkinDick.sharedMesh = RandomUtils.Chance(ChanceForFullFuta.Value) ? wardrobe2.DickMesh : wardrobe2.DickHalfMesh;
-            Material material = characterSex.IsMale ? UnityEngine.Object.Instantiate(wardrobe2.DickMatM) : UnityEngine.Object.Instantiate(wardrobe2.DickMatF);
-            wardrobe.SkinDick.sharedMaterial = material;
-            var color = wardrobe.SkinCharacter.material.GetColor("_Albedo_Tint");
-            wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", color);
-        } else {
-            Plugin.Log.Info($"{characterSex.characterName} will use strapon");
-
-            wardrobe.SkinDick.sharedMesh = wardrobe2.StrapMesh;
-            Material material = UnityEngine.Object.Instantiate(wardrobe2.StrapMat);
-            wardrobe.SkinDick.sharedMaterial = material;
-            var color = wardrobe.enemyData.customizationDATA.StrapOnColor;
-            wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", color);
-        }
-    }
-
-    public static void SetFutaState(CharacterSex characterSex, Wardrobe wardrobe) {
+    public static void SetFutaState(CharacterSex characterSex) {
         if (!Enabled.Value)
             return;
 
         if (Character.adultSettingsDATA.EREnabled)
             return;
 
+        if (characterSex.IsMale)
+            return;
+
         var wardrobe2 = GameObject.Find("WardrobeOBJ")?.GetComponentWithCast<Wardrobe2>();
         if (wardrobe2 is null)
             return;
 
-        Plugin.Log.Debug($"SetFutaState: {(wardrobe.SkinDick.sharedMesh.name != wardrobe2.StrapMesh.name ? "YES" : "No")}");
+        Plugin.Log.Debug($"{characterSex.characterName}: SetFutaState: {(characterSex.wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh ? "YES" : "No")}");
 
-        if (wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh)
+        if (characterSex.wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh)
             characterSex.IsFuta = true;
         else
             characterSex.IsFuta = false;
     }
 
-    public static void CheckHat(Wardrobe wardrobe) {
+    public static void CheckHat(ref Wardrobe wardrobe) {
         if (wardrobe.enemyData.customizationDATA.WearingHat) {
             Plugin.Log.Info("Hat");
             wardrobe.SetHairEnCreator(true);
             return;
         }
+    }
+
+    private static CharacterBody CalculateBody( BodyProfile bodyProfile, bool isMale ) {
+        float extraBoobs = 0.0f;
+        if (!isMale && RandomUtils.Chance(25)) {
+            Plugin.Log.Info("Extra boobs");
+            extraBoobs += 0.25f;
+        }
+
+        float extraBooty = 0f;
+        if (!isMale && RandomUtils.Chance(25)) {
+            Plugin.Log.Info("Extra booty");
+            extraBooty += 0.25f;
+        }
+
+        CharacterBody cb = new() {
+            Areola  = Math.Clamp(bodyProfile.Areola.GetSize(), BodyRestrictions.Areola.Min, BodyRestrictions.Areola.Max),
+            Arms    = Math.Clamp(bodyProfile.Arms.GetSize(), BodyRestrictions.Arms.Min, BodyRestrictions.Arms.Max ),
+            Belly   = Math.Clamp(bodyProfile.Belly.GetSize(), BodyRestrictions.Belly.Min, BodyRestrictions.Belly.Max ),
+            Biceps  = Math.Clamp(bodyProfile.Biceps.GetSize(), BodyRestrictions.Biceps.Min, BodyRestrictions.Biceps.Max ),
+            Boobs   = Math.Clamp(bodyProfile.Boobs.GetSize(extraBoobs), BodyRestrictions.Boobs.Min, BodyRestrictions.Boobs.Max),
+            Booty   = Math.Clamp(bodyProfile.Booty.GetSize(extraBooty), BodyRestrictions.Booty.Min, BodyRestrictions.Booty.Max ),
+            Calves  = Math.Clamp(bodyProfile.Calves.GetSize(), BodyRestrictions.Calves.Min, BodyRestrictions.Calves.Max ),
+            Dick    = Math.Clamp(bodyProfile.Dick.GetSize(), BodyRestrictions.Dick.Min, BodyRestrictions.Dick.Max ),
+            Hips    = Math.Clamp(bodyProfile.Hips.GetSize(), BodyRestrictions.Hips.Min, BodyRestrictions.Hips.Max ),
+            Muscle  = Math.Clamp(bodyProfile.Muscle.GetSize(), BodyRestrictions.Muscle.Min, BodyRestrictions.Muscle.Max),
+            Thighs  = Math.Clamp(bodyProfile.Thighs.GetSize(), BodyRestrictions.Thighs.Min, BodyRestrictions.Thighs.Max ),
+            Torso   = Math.Clamp(bodyProfile.Torso.GetSize(), BodyRestrictions.Torso.Min, BodyRestrictions.Torso.Max ),
+        };
+
+        float fat = Normalize(cb.Belly, 0.3f, 4.0f);
+        float muscle = Normalize(cb.Muscle, 0.0f, 2.5f);
+
+        // --- 1. Жир распределяется по телу ---
+        cb.Arms     += fat * 0.3f;
+        cb.Booty    += fat * 0.3f;
+        cb.Calves   += fat * 0.3f;
+        cb.Hips     += fat * 0.4f;
+        cb.Thighs   += fat * 0.5f;
+
+        // --- 2. Мышцы влияют на тело ---
+        cb.Arms     += muscle * 0.6f;
+        cb.Biceps   += muscle * 1.2f;
+        cb.Calves   += muscle * 0.5f;
+        cb.Thighs   += muscle * 0.6f;
+        cb.Torso    += muscle * 0.7f;
+
+        // --- 3. Баланс верх/низ ---
+        float lower = (cb.Thighs + cb.Calves) * 0.5f;
+        float upper = (cb.Arms + cb.Biceps) * 0.5f;
+        float diff  = upper - lower;
+
+        cb.Thighs   -= diff * 0.3f;
+        cb.Calves   -= diff * 0.2f;
+
+        // --- 4. Связка бедра/ягодицы ---
+        cb.Booty    += (cb.Hips - 1.0f) * 0.5f;
+        cb.Thighs   += (cb.Hips - 1.0f) * 0.4f;
+
+        // --- 5. Торс ↔ живот ---
+        cb.Torso    += (cb.Belly - 1.0f) * 0.3f;
+
+        // --- 6. Грудь ↔ жир ---
+        cb.Boobs    += fat * 0.4f;
+
+        // --- 7. Ареолы ↔ грудь ---
+        float areolaSize = cb.Areola;
+        areolaSize  += (cb.Boobs - 1.0f) * 2.0f;
+        areolaSize  = Mathf.Clamp(areolaSize, 0.0f, 7.0f);
+        cb.Areola   = Mathf.RoundToInt(areolaSize);
+
+        // --- 8. Лёгкая корреляция размера тела ---
+        cb.Dick     += (cb.Torso - 1.0f) * 0.05f;
+
+        // --- 9. Общая масса тела ---
+        float mass  = (cb.Belly + cb.Thighs + cb.Hips) / 3.0f;
+        float scale = (mass - 1.0f);
+
+        cb.Arms     += scale * 0.2f;
+        cb.Calves   += scale * 0.2f;
+        cb.Torso    += scale * 0.3f;
+
+        // --- 10. Анти-экстрим ---
+        if (cb.Belly > 3.0f)
+            cb.Muscle *= 0.8f;
+
+        if (cb.Muscle > 2.0f)
+            cb.Belly *= 0.85f;
+
+        cb.Areola   = Mathf.Clamp(cb.Areola, BodyRestrictions.Areola.Min, BodyRestrictions.Areola.Max);
+        cb.Arms     = Math.Clamp(cb.Arms, BodyRestrictions.Arms.Min, BodyRestrictions.Arms.Max);
+        cb.Belly    = Math.Clamp(cb.Belly, BodyRestrictions.Belly.Min, BodyRestrictions.Belly.Max );
+        cb.Biceps   = Math.Clamp(cb.Biceps, BodyRestrictions.Biceps.Min, BodyRestrictions.Biceps.Max );
+        cb.Boobs    = Math.Clamp(cb.Boobs, BodyRestrictions.Boobs.Min, BodyRestrictions.Boobs.Max );
+        cb.Booty    = Math.Clamp(cb.Booty, BodyRestrictions.Booty.Min, BodyRestrictions.Booty.Max );
+        cb.Calves   = Math.Clamp(cb.Calves, BodyRestrictions.Calves.Min, BodyRestrictions.Calves.Max );
+        cb.Dick     = Math.Clamp(cb.Dick, BodyRestrictions.Dick.Min, BodyRestrictions.Dick.Max );
+        cb.Hips     = Math.Clamp(cb.Hips, BodyRestrictions.Hips.Min, BodyRestrictions.Hips.Max );
+        cb.Muscle   = Math.Clamp(cb.Muscle, BodyRestrictions.Muscle.Min, BodyRestrictions.Muscle.Max );
+        cb.Thighs   = Math.Clamp(cb.Thighs, BodyRestrictions.Thighs.Min, BodyRestrictions.Thighs.Max );
+        cb.Torso    = Math.Clamp(cb.Torso, BodyRestrictions.Torso.Min, BodyRestrictions.Torso.Max );
+
+        return cb;
+
+        static float Normalize(float value, float min, float max) => (value - min) / (max - min);
     }
 
     private static float GetSkewedValue(float max) {
@@ -1134,212 +1359,590 @@ public class CharacterBodyRandomizerMod {
         return skewed * max;
     }
 
+    private static BodyRestrictions GetBodyRestrictions() {
+        var restrictions = new BodyRestrictions {
+            Areola = new BodyRestrictions.ValueRestrictions<int> { Min = 0, Max = 7 },
+            Arms = new BodyRestrictions.ValueRestrictions<float> { Min = 0.3f, Max = 5.0f },
+            Belly = new BodyRestrictions.ValueRestrictions<float> { Min = 0.3f, Max = 4.0f },
+            Biceps = new BodyRestrictions.ValueRestrictions<float> { Min = 0.3f, Max = 7.0f },
+            Boobs = new BodyRestrictions.ValueRestrictions<float> { Min = 0.7f, Max = 1.5f },
+            Booty = new BodyRestrictions.ValueRestrictions<float> { Min = 0.5f, Max = 1.5f },
+            Calves = new BodyRestrictions.ValueRestrictions<float> { Min = 0.3f, Max = 4.5f },
+            Dick = new BodyRestrictions.ValueRestrictions<float> { Min = 0.7f, Max = 1.5f },
+            Hips = new BodyRestrictions.ValueRestrictions<float> { Min = 0.3f, Max = 3.5f },
+            Muscle = new BodyRestrictions.ValueRestrictions<float> { Min = 0.0f, Max = 2.5f },
+            Thighs = new BodyRestrictions.ValueRestrictions<float> { Min = 0.3f, Max = 4.5f },
+            Torso = new BodyRestrictions.ValueRestrictions<float> { Min = 0.3f, Max = 2.5f },
+        };
+
+        return restrictions;
+    }
+
     private static List<BodyProfile> GetBodyProfiles() { 
         var list = new List<BodyProfile> {
             new() {
-                Name = "Slender",
-                Muscle = 0.7f,
-                Torso = 1.0f,
-                Hips = 1.0f,
-                Belly = 1.0f,
-                Arms = 1.0f,
-                Biceps = 1.0f,
-                Thighs = 1.0f,
-                Calves = 1.0f,
-                Boobs = 0.9f,
-                AreolaSize = 2,
-                Booty = 1.0f,
-                Dick = 0.9f
+                Id      = 1,
+                Name    = "Slim",
+                Areola  = new()  { Base = 2, Variation = 1},
+                Arms    = new() { Base = 0.8f, Variation = 0.2f},
+                Belly   = new() { Base = 0.6f, Variation = 0.2f},
+                Biceps  = new() { Base = 0.7f, Variation = 0.2f},
+                Boobs   = new() { Base = 0.9f, Variation = 0.2f},
+                Booty   = new() { Base = 0.8f, Variation = 0.2f},
+                Calves  = new() { Base = 0.9f, Variation = 0.2f},
+                Dick    = new() { Base = 1.0f, Variation = 0.2f},
+                Hips    = new() { Base = 0.8f, Variation = 0.2f},
+                Muscle  = new() { Base = 0.3f, Variation = 0.2f},
+                Torso   = new() { Base = 0.9f, Variation = 0.2f},
+                Thighs  = new() { Base = 0.9f, Variation = 0.2f}
             },
             new() {
-                Name = "Athletic",
-                Muscle = 1.5f,
-                Torso = 1.1f,
-                Hips = 1.1f,
-                Belly = 1.2f,
-                Arms = 1.2f,
-                Biceps = 1.2f,
-                Thighs = 1.2f,
-                Calves = 1.1f,
-                Boobs = 1.1f,
-                AreolaSize = 3,
-                Booty = 1.1f,
-                Dick = 1.2f
+                Id      = 2,
+                Name    = "Athletic",
+                Areola  = new()  { Base = 3, Variation = 1},
+                Arms    = new() { Base = 1.5f, Variation = 0.4f},
+                Belly   = new() { Base = 0.7f, Variation = 0.2f},
+                Biceps  = new() { Base = 2.0f, Variation = 0.7f},
+                Boobs   = new() { Base = 1.0f, Variation = 0.2f},
+                Booty   = new() { Base = 1.1f, Variation = 0.3f},
+                Calves  = new() { Base = 1.5f, Variation = 0.4f},
+                Dick    = new() { Base = 1.1f, Variation = 0.2f},
+                Hips    = new() { Base = 1.0f, Variation = 0.3f},
+                Muscle  = new() { Base = 1.8f, Variation = 0.5f},
+                Torso   = new() { Base = 1.4f, Variation = 0.4f},
+                Thighs  = new() { Base = 1.6f, Variation = 0.5f}
             },
             new() {
-                Name = "Curvy",
-                Muscle = 1.0f,
-                Torso = 1.0f,
-                Hips = 1.4f,
-                Belly = 1.3f,
-                Arms = 1.0f,
-                Biceps = 1.0f,
-                Thighs = 1.2f,
-                Calves = 1.0f,
-                Boobs = 1.3f,
-                AreolaSize = 5,
-                Booty = 1.4f,
-                Dick = 1.0f
+                Id      = 3,
+                Name    = "Average",
+                Areola  = new()  { Base = 3, Variation = 2},
+                Arms    = new() { Base = 1.2f, Variation = 0.3f},
+                Belly   = new() { Base = 1.2f, Variation = 0.4f},
+                Biceps  = new() { Base = 1.3f, Variation = 0.5f},
+                Boobs   = new() { Base = 1.1f, Variation = 0.2f},
+                Booty   = new() { Base = 1.1f, Variation = 0.3f},
+                Calves  = new() { Base = 1.2f, Variation = 0.3f},
+                Dick    = new() { Base = 1.1f, Variation = 0.3f},
+                Hips    = new() { Base = 1.2f, Variation = 0.3f},
+                Muscle  = new() { Base = 0.8f, Variation = 0.4f},
+                Torso   = new() { Base = 1.2f, Variation = 0.3f},
+                Thighs  = new() { Base = 1.3f, Variation = 0.4f}
             },
             new() {
-                Name = "Heavy",
-                Muscle = 1.3f,
-                Torso = 1.3f,
-                Hips = 1.3f,
-                Belly = 1.4f,
-                Arms = 1.3f,
-                Biceps = 1.3f,
-                Thighs = 1.3f,
-                Calves = 1.3f,
-                Boobs = 1.0f,
-                AreolaSize = 5,
-                Booty = 1.2f,
-                Dick = 1.1f
+                Id      = 4,
+                Name    = "Chubby",
+                Areola  = new()  { Base = 4, Variation = 2},
+                Arms    = new() { Base = 1.8f, Variation = 0.5f},
+                Belly   = new() { Base = 2.2f, Variation = 0.7f},
+                Biceps  = new() { Base = 1.5f, Variation = 0.5f},
+                Boobs   = new() { Base = 1.3f, Variation = 0.3f},
+                Booty   = new() { Base = 1.4f, Variation = 0.3f},
+                Calves  = new() { Base = 1.7f, Variation = 0.5f},
+                Dick    = new() { Base = 1.1f, Variation = 0.3f},
+                Hips    = new() { Base = 1.6f, Variation = 0.4f},
+                Muscle  = new() { Base = 0.6f, Variation = 0.3f},
+                Torso   = new() { Base = 1.8f, Variation = 0.5f},
+                Thighs  = new() { Base = 2.0f, Variation = 0.6f}
             },
             new() {
-                Name = "Jacked",
-                Muscle = 2.0f,
-                Torso = 1.4f,
-                Hips = 1.2f,
-                Belly = 1.2f,
-                Arms = 1.8f,
-                Biceps = 1.8f,
-                Thighs = 1.8f,
-                Calves = 1.6f,
-                Boobs = 1.0f,
-                AreolaSize = 6,
-                Booty = 1.0f,
-                Dick = 1.3f
+                Id      = 5,
+                Name    = "Fat",
+                Areola  = new()  { Base = 5, Variation = 2},
+                Arms    = new() { Base = 2.5f, Variation = 0.8f},
+                Belly   = new() { Base = 3.2f, Variation = 0.8f},
+                Biceps  = new() { Base = 1.8f, Variation = 0.6f},
+                Boobs   = new() { Base = 1.5f, Variation = 0.3f},
+                Booty   = new() { Base = 1.5f, Variation = 0.3f},
+                Calves  = new() { Base = 2.3f, Variation = 0.7f},
+                Dick    = new() { Base = 1.0f, Variation = 0.3f},
+                Hips    = new() { Base = 2.2f, Variation = 0.6f},
+                Muscle  = new() { Base = 0.5f, Variation = 0.3f},
+                Torso   = new() { Base = 2.2f, Variation = 0.6f},
+                Thighs  = new() { Base = 2.8f, Variation = 0.8f}
             },
-            new() {
-                Name = "Bimbo",
-                Muscle = 0.5f,
-                Torso = 0.8f,
-                Hips = 1.3f,
-                Belly = 0.9f,
-                Arms = 0.7f,
-                Biceps = 0.7f,
-                Thighs = 1.2f,
-                Calves = 1.0f,
-                Boobs = 1.8f,
-                AreolaSize = 7,
-                Booty = 1.6f,
-                Dick = 0.9f
-            },
-            new() {
-                Name = "Sex Doll",
-                Muscle = 1.0f,
-                Torso = 1.0f,
-                Hips = 1.0f,
-                Belly = 1.0f,
-                Arms = 1.0f,
-                Biceps = 1.0f,
-                Thighs = 1.0f,
-                Calves = 1.0f,
-                Boobs = 1.5f,
-                AreolaSize = 8,
-                Booty = 1.5f,
-                Dick = 1.0f
-            },
-            new() {
-                Name = "Futa",
-                Muscle = 1.2f,
-                Torso = 1.0f,
-                Hips = 1.1f,
-                Belly = 1.0f,
-                Arms = 1.0f,
-                Biceps = 1.0f,
-                Thighs = 1.0f,
-                Calves = 1.0f,
-                Boobs = 1.4f,
-                AreolaSize = 5,
-                Booty = 1.3f,
-                Dick = 1.3f
-            },
-            new() {
-                Name = "Succubus",
-                Muscle = 1.0f,
-                Torso = 1.0f,
-                Hips = 1.2f,
-                Belly = 1.0f,
-                Arms = 0.8f,
-                Biceps = 0.8f,
-                Thighs = 1.1f,
-                Calves = 1.0f,
-                Boobs = 1.6f,
-                AreolaSize = 6,
-                Booty = 1.5f,
-                Dick = 1.1f
-            },
-            new() {
-                Name = "Petite Lolita",
-                Muscle = 0.4f,
-                Torso = 0.7f,
-                Hips = 0.8f,
-                Belly = 0.8f,
-                Arms = 0.6f,
-                Biceps = 0.6f,
-                Thighs = 0.7f,
-                Calves = 0.7f,
-                Boobs = 0.6f,
-                AreolaSize = 6,
-                Booty = 0.7f,
-                Dick = 0.8f
-            },
-            new() {
-                Name = "Amazon",
-                Muscle = 2.0f,
-                Torso = 1.3f,
-                Hips = 1.2f,
-                Belly = 1.1f,
-                Arms = 1.8f,
-                Biceps = 1.6f,
-                Thighs = 1.8f,
-                Calves = 1.6f,
-                Boobs = 1.0f,
-                AreolaSize = 1,
-                Booty = 1.1f,
-                Dick = 1.1f
-            }
         };
         return list;
     }
     
-    private static List<EnemyRace> GetEnemyRaces() {
-        List<EnemyRace> enemyRaces = [
-            new EnemyRace {
-                Name = "European",
-                SkinColors = ["#FFEFE0", "#FFDAB3","#FFC28C","#FFAC66","#E6954F"],
-                HairColors = ["#1C0F00", "#2C1B0A", "#3A2F17", "#4B3821", "#5E4A2D", "#846644","#A67B5B", "#C19A6B", "#D2B48C", "#F1C27D", "#E0AC69", "#FFD700"],
-                HairFantasyColors = ["#5F00FF", "#00FFFF", "#FF1493","#7FFF00", "#C0C0C0"],
-                EyesColors = ["#2E1A47", "#1E3A5F", "#4B3621", "#A3A3A3", "#627A72", "#3A5F3E", "#7F462C"],
-                EyesFantasyColors = ["#FFD700", "#00FF7F", "#8A2BE2", "#FF4500", "#FFFFFF"]
+    private static List<EnemyEthnicity> GetEnemyEthnicities() {
+        List<EnemyEthnicity> list = [];
+
+        list.Add(new EnemyEthnicity {
+            Id = 0,
+            Name = "Any human",
+            RandomEthnicity = [1, 2, 3, 4]
+        });
+        list.Add(new EnemyEthnicity {
+            Id = 1,
+            Name = "White human",
+
+            BodyWeights = new Dictionary<string, int>() {
+                { "Slim", 20 },
+                { "Athletic", 25 },
+                { "Average", 30 },
+                { "Chubby", 15 },
+                { "Fat", 10 },
             },
-            new EnemyRace {
-                Name = "African",
-                SkinColors = ["#4E342E", "#5D4037", "#6D4C41", "#795548", "#8D6E63"],
-                HairColors = ["#0B0B0B", "#1A1A1A", "#2F2F2F", "#3D3D3D", "#4A4A4A", "#5A5A5A", "#6B6B6B", "#7C7C7C", "#8E8E8E", "#A0A0A0"],
-                HairFantasyColors = ["#FF00FF", "#00FFBB", "#FFD300", "#FF5500", "#B19CD9"],
-                EyesColors = ["#1B0B00","#3E2723","#5D4037","#795548","#6A1B9A","#004D40"],
-                EyesFantasyColors = ["#00FFFF", "#FF1493", "#FFFF00", "#FFFFFF", "#8B0000"]
+
+            EyesColors = [],
+            HairColors = [],
+            SkinTones = [
+                new EnemyEthnicity.Color {
+                    R = 1.0f,
+                    G = 1.0f,
+                    B = 1.0f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.98490566f,
+                    G = 0.9605153f,
+                    B = 0.9198647f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.932075440f,
+                    G = 0.89697930f,
+                    B = 0.84238520f,
+                    A = 0.0f,
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.894339560f,
+                    G = 0.83069920f,
+                    B = 0.727283660f,
+                    A = 0.0f,
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.84905660f,
+                    G = 0.78607820f,
+                    B = 0.67123530f,
+                    A = 0.0f,
+                }
+            ],
+            MakeUpColors = [],
+
+            FaceStyle = [],
+            EyesStyle = [],
+            NoseStyle = [],
+            BrowStyle = [],
+            MouthStyle = [],
+            MouthLength = [],
+            LipsForward = [],
+            LipsSize = [],
+            EarsStyle = [0],
+        });
+        list.Add(new EnemyEthnicity {
+            Id = 2,
+            Name = "Latin human",
+
+            BodyWeights = new Dictionary<string, int>() {
+                { "Slim", 18 },
+                { "Athletic", 27 },
+                { "Average", 28 },
+                { "Chubby", 17 },
+                { "Fat", 10 },
             },
-            new EnemyRace {
-                Name = "Latin",
-                SkinColors          = ["#E7AC7B","#D28F5A","#BD6E3C","#A55A31","#8F3F2A"],
-                HairColors          = ["#1C0A00","#2A1C0E","#3C2F1D","#5B3A26","#7A4E2F","#9C6733","#BF7A41","#D29969","#E5BA92","#F0D3B8","#2F150F"],
-                HairFantasyColors   = ["#FF00AA","#00AAFF","#AAFF00","#FFAA00","#AA00FF"],
-                EyesColors          = ["#3E2723","#5D4037","#6D4C41","#8E6B55","#556B2F","#336699","#7A5230"],
-                EyesFantasyColors   = ["#FFD700", "#00CED1", "#FF4500", "#DA70D6", "#FFFFFF"]
+
+            EyesColors = [],
+            HairColors = [],
+            SkinTones = [
+                new EnemyEthnicity.Color{
+                    R = 0.89433956f,
+                    G = 0.8306992f,
+                    B = 0.72728366f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color{
+                    R = 0.8490566f,
+                    G = 0.7860782f,
+                    B = 0.6712353f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color{
+                    R = 0.7735849f,
+                    G = 0.7222288f,
+                    B = 0.63492346f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color{
+                    R = 0.735849f,
+                    G = 0.64512044f,
+                    B = 0.50398713f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color{
+                    R = 0.6981132f,
+                    G = 0.5730826f,
+                    B = 0.3780349f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.5396226f,
+                    G = 0.4466827f,
+                    B = 0.2881381f,
+                    A = 0.0f
+                }
+            ],
+            MakeUpColors = [],
+
+            FaceStyle = [],
+            EyesStyle = [],
+            NoseStyle = [],
+            BrowStyle = [],
+            MouthStyle = [],
+            MouthLength = [],
+            LipsForward = [],
+            LipsSize = [],
+            EarsStyle = [0],
+        });
+        list.Add(new EnemyEthnicity {
+            Id = 3,
+            Name = "Black human",
+
+            BodyWeights = new Dictionary<string, int>() {
+                { "Slim", 18 },
+                { "Athletic", 32 },
+                { "Average", 25 },
+                { "Chubby", 15 },
+                { "Fat", 10 },
             },
-            new EnemyRace {
-                Name = "Asian",
-                SkinColors          = ["#FFE1C4","#FFD2A6","#E8B589","#C99467","#A67C52"],
-                HairColors          = ["#000000","#1C1C1C","#333333","#4D4D4D","#666666","#7F7F7F","#999999","#B2B2B2","#CCCCCC","#E5E5E5"],
-                HairFantasyColors   = ["#00FF7F","#FF69B4","#8A2BE2","#1E90FF","#FFD700"],
-                EyesColors          = ["#3E2723","#5D4037","#8E6B55","#336699","#4B3621","#627A72"],
-                EyesFantasyColors   = ["#00FFFF", "#FF1493", "#ADFF2F", "#B22222", "#FFFFFF"]
+
+            EyesColors = [],
+            HairColors = [],
+            SkinTones = [
+                new EnemyEthnicity.Color {
+                    R = 0.4716981f,
+                    G = 0.37851143f,
+                    B = 0.23050907f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.27450982f,
+                    G = 0.2f,
+                    B = 0.078431375f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.20784314f,
+                    G = 0.13725491f,
+                    B = 0.023529412f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.554717f,
+                    G = 0.21552648f,
+                    B = 0.15385546f,
+                    A = 0.0f
+                }
+            ],
+            MakeUpColors = [],
+
+            FaceStyle = [],
+            EyesStyle = [],
+            NoseStyle = [],
+            BrowStyle = [],
+            MouthStyle = [],
+            MouthLength = [],
+            LipsForward = [],
+            LipsSize = [],
+            EarsStyle = [0],
+        });
+        list.Add(new EnemyEthnicity {
+            Id = 4,
+            Name = "Asian human",
+
+            BodyWeights = new Dictionary<string, int>() {
+                { "Slim", 25 },
+                { "Athletic", 25 },
+                { "Average", 28 },
+                { "Chubby", 12 },
+                { "Fat", 10 },
             },
-        ];
-        return enemyRaces;
+
+            EyesColors = [],
+            HairColors = [],
+            SkinTones = [],
+            MakeUpColors = [],
+
+            FaceStyle = [],
+            EyesStyle = [],
+            NoseStyle = [],
+            BrowStyle = [],
+            MouthStyle = [],
+            MouthLength = [],
+            LipsForward = [],
+            LipsSize = [],
+            EarsStyle = [0],
+        });
+
+        list.Add(new EnemyEthnicity {
+            Id = 5,
+            Name = "Any elf",
+            RandomEthnicity = [6, 7, 8, 9]
+        });
+        list.Add(new EnemyEthnicity {
+            Id = 6,
+            Name = "High elf",
+
+            BodyWeights = new Dictionary<string, int>() {
+                { "Slim", 55 },
+                { "Athletic", 35 },
+                { "Average", 8 },
+                { "Chubby", 2 },
+                { "Fat", 1 },
+            },
+
+            EyesColors = [],
+            HairColors = [],
+            SkinTones = [
+                new EnemyEthnicity.Color {
+                    R = 1.0f,
+                    G = 1.0f,
+                    B = 1.0f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.98490566f,
+                    G = 0.9605153f,
+                    B = 0.9198647f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.932075440f,
+                    G = 0.89697930f,
+                    B = 0.84238520f,
+                    A = 0.0f,
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.894339560f,
+                    G = 0.83069920f,
+                    B = 0.727283660f,
+                    A = 0.0f,
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.84905660f,
+                    G = 0.78607820f,
+                    B = 0.67123530f,
+                    A = 0.0f,
+                }
+            ],
+            MakeUpColors = [],
+
+            FaceStyle = [],
+            EyesStyle = [],
+            NoseStyle = [],
+            BrowStyle = [],
+            MouthStyle = [],
+            MouthLength = [],
+            LipsForward = [],
+            LipsSize = [],
+            EarsStyle = [2,3,4,5],
+        });
+        list.Add(new EnemyEthnicity {
+            Id = 7,
+            Name = "Latin elf",
+
+            BodyWeights = new Dictionary<string, int>() {
+                { "Slim", 45 },
+                { "Athletic", 35 },
+                { "Average", 12 },
+                { "Chubby", 6 },
+                { "Fat", 2 },
+            },
+
+            EyesColors = [],
+            HairColors = [],
+            SkinTones = [
+                new EnemyEthnicity.Color {
+                    R = 0.89433956f,
+                    G = 0.8306992f,
+                    B = 0.72728366f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.8490566f,
+                    G = 0.7860782f,
+                    B = 0.6712353f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.7735849f,
+                    G = 0.7222288f,
+                    B = 0.63492346f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.735849f,
+                    G = 0.64512044f,
+                    B = 0.50398713f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.6981132f,
+                    G = 0.5730826f,
+                    B = 0.3780349f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.5396226f,
+                    G = 0.4466827f,
+                    B = 0.2881381f,
+                    A = 0.0f
+                }
+            ],
+            MakeUpColors = [],
+
+            FaceStyle = [],
+            EyesStyle = [],
+            NoseStyle = [],
+            BrowStyle = [],
+            MouthStyle = [],
+            MouthLength = [],
+            LipsForward = [],
+            LipsSize = [],
+            EarsStyle = [2,3,4,5],
+        });
+        list.Add(new EnemyEthnicity {
+            Id = 8,
+            Name = "Drow elf",
+
+            BodyWeights = new Dictionary<string, int>() {
+                { "Slim", 40 },
+                { "Athletic", 50 },
+                { "Average", 8 },
+                { "Chubby", 2 },
+                { "Fat", 1 },
+            },
+
+            EyesColors = [],
+            HairColors = [],
+            SkinTones = [
+                new EnemyEthnicity.Color {
+                    R = 0.5137255f,
+                    G = 0.32156864f,
+                    B = 0.60784316f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.48235294f,
+                    G = 0.4117647f,
+                    B = 0.654902f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.36078432f,
+                    G = 0.2901961f,
+                    B = 0.5411765f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.30588236f,
+                    G = 0.5294118f,
+                    B = 0.28627452f,
+                    A = 0.0f
+                }
+            ],
+            MakeUpColors = [],
+
+            FaceStyle = [],
+            EyesStyle = [],
+            NoseStyle = [],
+            BrowStyle = [],
+            MouthStyle = [],
+            MouthLength = [],
+            LipsForward = [],
+            LipsSize = [],
+            EarsStyle = [2,3,4,5],
+        });
+        list.Add(new EnemyEthnicity {
+            Id = 9,
+            Name = "Red elf",
+
+            BodyWeights = new Dictionary<string, int>() {
+                { "Slim", 35 },
+                { "Athletic", 35 },
+                { "Average", 20 },
+                { "Chubby", 8 },
+                { "Fat", 2 },
+            },
+
+            EyesColors = [],
+            HairColors = [],
+            SkinTones = [
+                new EnemyEthnicity.Color {
+                    R = 0.5245282f,
+                    G = 0.12973839f,
+                    B = 0.058390833f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.45490196f,
+                    G = 0.07450981f,
+                    B = 0.0f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.4056604f,
+                    G = 0.024536664f,
+                    B = 0.0f,
+                    A = 0.0f
+                },
+                new EnemyEthnicity.Color {
+                    R = 0.61960787f,
+                    G = 0.42745098f,
+                    B = 0.70980394f,
+                    A = 0.0f
+                }
+            ],
+            MakeUpColors = [],
+
+            FaceStyle = [],
+            EyesStyle = [],
+            NoseStyle = [],
+            BrowStyle = [],
+            MouthStyle = [],
+            MouthLength = [],
+            LipsForward = [],
+            LipsSize = [],
+            EarsStyle = [2,3,4,5],
+        });
+
+        list.Add(new EnemyEthnicity {
+            Id = 10,
+            Name = "Random",
+            RandomEthnicity = [1, 2, 3, 4, 6, 7, 8, 9]
+        });
+
+        return list;
+    }
+
+    private static EnemyEthnicity GetEnemyEthnicity( int id ) {
+        EnemyEthnicity enemyEthnicity = EnemyEthnicities.Find( x => x.Id == id );
+        enemyEthnicity ??= RandomUtils.Item( EnemyEthnicities.Where(x => !x.IsRandomEthnicity) );
+
+        if (enemyEthnicity.IsRandomEthnicity)
+            enemyEthnicity = RandomUtils.Item(EnemyEthnicities.Where(x => enemyEthnicity.RandomEthnicity.Contains(x.Id)));
+
+        return enemyEthnicity;
+    }
+
+    public static BodyProfile GetBodyProfile(Dictionary<BodyProfile, int> weights) {
+        int total = 0;
+
+        foreach (var w in weights.Values)
+            total += w;
+
+        int roll = RandomUtils.Int32(total);
+
+        int current = 0;
+
+        foreach (var pair in weights) {
+            current += pair.Value;
+
+            if (roll <= current)
+                return pair.Key;
+        }
+
+        // fallback (на всякий случай)
+        return BodyProfiles.RandomItem();
     }
 }

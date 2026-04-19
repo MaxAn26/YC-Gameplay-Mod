@@ -1,0 +1,98 @@
+[
+  {
+    "Id": 1,
+    "Name": "Balanced",
+    "Command": {
+      "PreferredTags": "Sensual, Universal",
+      "NeutralTags": "Dominant, Service",
+      "AvoidTags": "Rough, Smothering, Spanking",
+      "Modifier": 1
+    },
+    "Perform": {
+      "PreferredTags": "Sensual, Universal",
+      "NeutralTags": "Service, Wresting",
+      "AvoidTags": "Rough, Smothering, Spanking",
+      "Modifier": 1
+    }
+  },
+  {
+    "Id": 2,
+    "Name": "Dominant",
+    "Command": {
+      "PreferredTags": "Wresting",
+      "NeutralTags": "Rough, Sensual, Universal",
+      "AvoidTags": "Service, Smothering, Spanking",
+      "Modifier": 1
+    },
+    "Perform": {
+      "PreferredTags": "Dominant, Rough, Smothering, Spanking",
+      "NeutralTags": "Universal, Wresting",
+      "AvoidTags": "Sensual, Service",
+      "Modifier": 3
+    }
+  },
+  {
+    "Id": 3,
+    "Name": "Defensive",
+    "Command": {
+      "PreferredTags": "Sensual, Service",
+      "NeutralTags": "Universal",
+      "AvoidTags": "Dominant, Rough, Smothering, Spanking",
+      "Modifier": 2
+    },
+    "Perform": {
+      "PreferredTags": "Sensual, Service",
+      "NeutralTags": "Universal",
+      "AvoidTags": "Dominant, Rough, Smothering, Spanking, Wresting",
+      "Modifier": 1
+    }
+  },
+  {
+    "Id": 4,
+    "Name": "Passionate",
+    "Command": {
+      "PreferredTags": "Dominant, Rough, Smothering",
+      "NeutralTags": "Sensual, Wresting",
+      "AvoidTags": "Service",
+      "Modifier": 1
+    },
+    "Perform": {
+      "PreferredTags": "Rough, Sensual, Wresting",
+      "NeutralTags": "Dominant, Universal",
+      "AvoidTags": "Service",
+      "Modifier": 2
+    }
+  },
+  {
+    "Id": 5,
+    "Name": "Submissive",
+    "Command": {
+      "PreferredTags": "Dominant, Rough, Smothering, Spanking",
+      "NeutralTags": "Sensual",
+      "AvoidTags": "Wresting",
+      "Modifier": 3
+    },
+    "Perform": {
+      "PreferredTags": "Service",
+      "NeutralTags": "Sensual, Universal",
+      "AvoidTags": "Dominant, Rough, Smothering, Spanking, Wresting",
+      "Modifier": 1
+    }
+  },
+  {
+    "Id": 6,
+    "Name": "Trickster",
+    "Command": {
+      "PreferredTags": "Dominant, Rough, Spanking",
+      "NeutralTags": "Sensual, Wresting",
+      "AvoidTags": "Service",
+      "Modifier": 1
+    },
+    "Perform": {
+      "PreferredTags": "Rough, Smothering, Wresting",
+      "NeutralTags": "Dominant, Sensual, Universal",
+      "AvoidTags": "Service",
+      "Modifier": 1
+    }
+  }
+]

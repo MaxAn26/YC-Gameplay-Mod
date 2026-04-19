@@ -12,6 +12,7 @@ using MelonLoader;
 using UnityEngine;
 
 using YC.GameplayMod.Extensions;
+using YC.GameplayMod.Models;
 
 namespace YC.GameplayMod.Mods;
 internal class GameExtendMod {
@@ -246,30 +247,25 @@ internal class GameExtendMod {
         }
     }
 
-    internal static void BattleManagerExecuteAction( ref CombatAction combatAction ) {
+    internal static void BattleManagerExecuteAction(ref CombatAction combatAction) {
         if (!Enabled.Value || !AttackTarget.Value)
             return;
 
         if (combatAction.actionType is not 1 and not 2)
             return;
 
-        if (combatAction.actionTarget is not 1 and not 3 and not 4)
-            return;
-
         if (combatAction.caster.isPlayer)
             return;
 
-        if (combatAction.caster.combatAI is null || combatAction.target?.combatAI is null)
+        if (combatAction.caster?.combatAI is null || combatAction.target?.combatAI is null)
             return;
 
-        List<CharacterAttributes> enemies = [];
         CharacterAttributes target = null;
         if (combatAction.caster.IsCompanion(false) && !combatAction.target.IsCompanion()) {
-            target = CompanionAttackTarget( combatAction, [.. Zessentials.Instance.GetAllFreeEnemyTargets()]);
-            SetNewTarget(ref combatAction, target);
+            target = ChooseAttackTarget(combatAction, [.. Zessentials.Instance.GetAllFreeEnemyTargets()]);
         } else if (combatAction.caster.IsEnemy() && combatAction.target.IsCompanion()) {
-            target = EnemyAttackTarget( combatAction, [.. Zessentials.Instance.GetAllFreePlayerTargets()]);
-            
+            target = ChooseAttackTarget(combatAction, [.. Zessentials.Instance.GetAllFreePlayerTargets()]);
+
         }
 
         if (target is null) {
@@ -279,36 +275,152 @@ internal class GameExtendMod {
 
         SetNewTarget(ref combatAction, target);
 
-        static CharacterAttributes CompanionAttackTarget( CombatAction action, List<CharacterAttributes> freeTargets) {
+        static CharacterAttributes ChooseAttackTarget(CombatAction action, List<CharacterAttributes> freeTargets) {
             freeTargets = [.. freeTargets.Where(CheckCharacter)];
 
             if (freeTargets.Count <= 0) {
                 return null;
             }
 
-            CharacterAttributes newTarget = freeTargets.OrderBy(GetTargetScore).First();
+            EvaluationCaps caps = CalculateEvaluationCaps(action, freeTargets);
+
+            CharacterAttributes newTarget = freeTargets.OrderBy( t => GetTargetScore(action, t, caps)).Last();
 
             return newTarget;
-
-            static float GetTargetScore(CharacterAttributes characterAttributes) {
-                float score = 0f;
-
-                score += ((float)characterAttributes.currentHealth / characterAttributes.maxHealth);
-
-                score += RandomUtils.Float(0f, 0.2f);
-
-                Plugin.Log.Debug($"{characterAttributes.characterName}: score: {score}");
-                return score;
-            }
         }
 
-        static CharacterAttributes EnemyAttackTarget(CombatAction action, List<CharacterAttributes> freeTargets) {
-            freeTargets = [.. freeTargets.Where(CheckCharacter)];
+        static float GetTargetScore(CombatAction action, CharacterAttributes characterAttributes, EvaluationCaps caps) {
+            float score = 0f;
 
-            if (freeTargets.Count <= 0) {
-                return null;
+            score += CalculateThreatScore(characterAttributes, caps) * 0.25f;
+            score += CalculateVulnerabilityScore(characterAttributes, caps) * 0.3f;
+            score += CalculateEffectivenessScore(action, characterAttributes, caps) * 0.3f;
+            score += RandomUtils.Float(0f, 0.2f);
+
+            Plugin.Log.Debug($"{characterAttributes.characterName}: score: {score}");
+            return score;
+        }
+
+        static bool CheckCharacter(CharacterAttributes characterAttributes) {
+            if (characterAttributes.currentHealth < 1)
+                return false;
+
+            if (characterAttributes.characterSex.IsGrappled)
+                return false;
+
+            if (characterAttributes.CheckForStatus("Defenseless") || characterAttributes.CheckForStatus("Weakened"))
+                return false;
+
+            if (characterAttributes.characterSex.IsBoundHeavyRestraint > 0)
+                return false;
+
+            return true;
+        }
+
+        static EvaluationCaps CalculateEvaluationCaps(CombatAction action, List<CharacterAttributes> freeTargets) {
+            float maxAttack = 0f;
+            float maxDamage = 0f;
+            float maxDefense = 0f;
+            float maxHealth = 0f;
+
+            float casterDamageDone = GetCasterDamage(action);
+
+            foreach (CharacterAttributes target in freeTargets) { 
+                if (target is null) 
+                    continue;
+
+                if (target.isPlayer || CheckCharacter(target))
+                    continue;
+
+                maxAttack = Mathf.Max(GetMaxAttack(target), maxAttack);
+                maxDamage = Mathf.Max(GetTakenDamage(action, target), maxDamage);
+                maxDefense = Mathf.Max(GetMaxDefence(target), maxDefense);
+                maxHealth = Mathf.Max(target.currentHealth, maxHealth);
             }
 
+            return new EvaluationCaps {
+                MaxAttack = Mathf.Max(maxAttack * 1.2f, 1.0f),
+                MaxDamage = Mathf.Max(maxDamage * 1.2f, 1.0f),
+                MaxDefense = Mathf.Max(maxDefense * 1.2f, 1.0f),
+                MaxHealth = Mathf.Max(maxHealth * 1.2f, 1.0f),
+            };
+        }
+
+        static float CalculateThreatScore(CharacterAttributes target, EvaluationCaps caps) {
+            if (caps.MaxAttack <= 0f)
+                return 0f;
+
+            float attack = GetMaxAttack(target);
+            attack = Mathf.Min(attack, caps.MaxAttack);
+
+            return attack / caps.MaxAttack;
+        }
+
+        static float CalculateVulnerabilityScore(CharacterAttributes target, EvaluationCaps caps) {
+            float hp = (float)target.currentHealth / target.maxHealth;
+
+            float hpVuln = 1f - Mathf.Clamp01(hp);
+
+            float defVuln = 0f;
+            if (caps.MaxDefense > 0f) {
+                float defense = GetMaxDefence(target);
+                defense = Mathf.Min(defense, caps.MaxDefense);
+                
+                defVuln = 1f - ( defense / caps.MaxDefense );
+            }
+
+            float poolVuln = 0f;
+            if (caps.MaxHealth > 0f) {
+                float health = Math.Min(target.currentHealth, caps.MaxHealth);
+                poolVuln = 1f - (health / caps.MaxHealth);
+            }
+
+            float result = 0f;
+            result += hpVuln * 0.5f;
+            result += defVuln * 0.3f;
+            result += poolVuln * 0.2f;
+
+            return result;
+        }
+
+        static float CalculateEffectivenessScore( CombatAction action, CharacterAttributes target, EvaluationCaps caps) {
+            if (caps.MaxDamage <= 0f)
+                return 0f;
+
+            float damage = GetTakenDamage(action, target);
+            damage = Mathf.Min(damage, caps.MaxDamage);
+
+            return damage / caps.MaxDamage;
+        }
+
+        static float GetMaxAttack( CharacterAttributes character ) {
+            float targetAttack = 0f;
+            targetAttack = Mathf.Max(targetAttack, character.equippedWeapon?.weaponMinDamage ?? 0f);
+            targetAttack = Mathf.Max(targetAttack, character.attackPower);
+            targetAttack = Mathf.Max(targetAttack, character.spellPower);
+            targetAttack = Mathf.Max(targetAttack, character.abilityPower);
+            targetAttack = Mathf.Max(targetAttack, character.physicalDamage);
+            targetAttack = Mathf.Max(targetAttack, character.fireDamage);
+            targetAttack = Mathf.Max(targetAttack, character.lightningDamage);
+            targetAttack = Mathf.Max(targetAttack, character.corrosiveDamage);
+            targetAttack = Mathf.Max(targetAttack, character.shadowDamage);
+
+            targetAttack *= character.damageDone / 100f;
+
+            return targetAttack;
+        }
+        static float GetMaxDefence(CharacterAttributes character) {
+            float targetDefense = 0f;
+            targetDefense = Mathf.Max(targetDefense, character.defense);
+            targetDefense = Mathf.Max(targetDefense, character.physicalResistance);
+            targetDefense = Mathf.Max(targetDefense, character.fireResistance);
+            targetDefense = Mathf.Max(targetDefense, character.lightningResistance);
+            targetDefense = Mathf.Max(targetDefense, character.corrosiveResistance);
+            targetDefense = Mathf.Max(targetDefense, character.shadowResistance);
+
+            return targetDefense;
+        }
+        static float GetCasterDamage( CombatAction action ) {
             float casterDamage = 0f;
             casterDamage += action.caster.equippedWeapon.weaponMinDamage;
             if (action.isAttack)
@@ -323,7 +435,7 @@ internal class GameExtendMod {
             if (action.isWeaponAttack) { damageBonuses += action.caster.weaponDamage; }
             if (action.isOneHanded) { damageBonuses += action.caster.onehandedDamage; }
             if (action.isTwoHanded) { damageBonuses += action.caster.twohandedDamage; }
-            if (action.isUnarmed || action.caster.equippedWeapon.weaponType == 0) { damageBonuses += action.caster.unarmedDamage; }
+            if (action.isUnarmed) { damageBonuses += action.caster.unarmedDamage; }
             if (action.isKick) { damageBonuses += action.caster.kickDamage; }
             if (action.isSpell) { damageBonuses += action.caster.spellDamage; }
             if (action.isGrapple) { damageBonuses += action.caster.grappleDamage; }
@@ -340,59 +452,33 @@ internal class GameExtendMod {
             casterDamage *= damageBonuses / 100;
             casterDamage *= action.caster.damageDone / 100;
 
-            CharacterAttributes newTarget = freeTargets.OrderBy(GetTargetScore).First();
-
-            return newTarget;
-
-            float GetTargetScore(CharacterAttributes character) {
-                float defenseReduction = Mathf.Min(character.defense * 0.15f, 75f);
-                float defenseFactor = 1f - (defenseReduction / 100f);
-                float resistFactor = 1f;
-
-                if (action.elementPhysical)
-                    resistFactor *= GetResistance(character.physicalResistance);
-                if (action.elementFire)
-                    resistFactor *= GetResistance(character.fireResistance);
-                if (action.elementLightning)
-                    resistFactor *= GetResistance(character.lightningResistance);
-                if (action.elementCorrosive)
-                    resistFactor *= GetResistance(character.corrosiveResistance);
-                if (action.elementShadow)
-                    resistFactor *= GetResistance(character.shadowResistance);
-
-                float damageMultiplier = defenseFactor * resistFactor * (character.damageTaken / 100f);
-
-                float score = 0f;
-                score += ((float)character.currentHealth / character.maxHealth) * 0.5f;
-                score += (character.currentHealth / damageMultiplier) * 0.001f;
-                score += RandomUtils.Float(0f, 0.2f);
-
-                Plugin.Log.Debug($"{character.characterName}: score: {score}");
-                return score;
-
-                float GetResistance( int resistValue ) {
-                    return resistValue / 100f;
-                }
-            }
+            return casterDamage;
         }
+        static float GetTakenDamage(CombatAction action, CharacterAttributes target ) {
+            float casterDamage = GetCasterDamage(action);
 
-        static bool CheckCharacter(CharacterAttributes characterAttributes) {
-            if (characterAttributes.currentHealth < 1)
-                return false;
-               
-            if (characterAttributes.characterSex.IsGrappled) 
-                return false;
+            float defenseReduction = Mathf.Min(target.defense * 0.15f, 75f);
+            float damageTaken = casterDamage - (casterDamage * defenseReduction/100f);
 
-            if (characterAttributes.CheckForStatus("Defenseless") || characterAttributes.CheckForStatus("Weakened"))
-                return false;
+            if (action.elementPhysical)
+                damageTaken -= target.physicalResistance / 100f;
+            if (action.elementFire)
+                damageTaken -= target.fireResistance / 100f;
+            if (action.elementLightning)
+                damageTaken -= target.lightningResistance / 100f;
+            if (action.elementCorrosive)
+                damageTaken -= target.corrosiveResistance / 100f;
+            if (action.elementShadow)
+                damageTaken -= target.shadowResistance / 100f;
 
-            if (characterAttributes.characterSex.IsBoundHeavyRestraint > 0)
-                return false;
-            
-            return true;
+            damageTaken = damageTaken * action.target.damageTaken / 100;
+
+            if (action.canBeBlocked && target.isBlocking)
+                damageTaken /= 2;
+
+            return damageTaken;
         }
-
-        static void SetNewTarget( ref CombatAction action, CharacterAttributes newTarget) {
+        static void SetNewTarget(ref CombatAction action, CharacterAttributes newTarget) {
             if (newTarget != action.target) {
                 Plugin.Log.Debug($"Change CombatAction target from {action.target.characterName} to {newTarget.characterName}");
                 action.target = newTarget;

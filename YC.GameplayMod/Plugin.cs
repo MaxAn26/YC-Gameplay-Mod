@@ -37,6 +37,7 @@ public class Plugin : MelonMod {
         DickStraponVisibilityMod.Load(PluginConfig);
         CharacterBodyRandomizerMod.Load(PluginConfig);
         GameExtendMod.Load(PluginConfig);
+        GameFixMod.Load(PluginConfig);
         RandomReverseMod.Load(PluginConfig);
         SexChoiceRealismMod.Load(PluginConfig);
 

@@ -503,7 +503,7 @@ internal class SexChoiceRealismMod {
             return 1;
 
         int score = 0;
-        if (sexMove.IsPerform) {
+        if (sexMove.IsPerform || !sexMove.IsCommand) {
             score += GetWeight(sexMove.SexTags, personality.Perform);
         }
 

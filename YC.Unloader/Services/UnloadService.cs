@@ -219,4 +219,31 @@ internal static class UnloadService {
             Plugin.Log.Error(ex.Message);
         }
     }
+
+    internal static void UnloadColors() {
+        try {
+            ColorsList colors = new();
+            CombatEnemyManager enemyManager = Zessentials.Instance.battleManager.enemyManager;
+
+            foreach(var color in enemyManager.EyeColors) {
+                colors.EyesColors.Add( ColorsList.Color.FromUnityColor(color) );
+            }
+
+            foreach (var color in enemyManager.HairColors) {
+                colors.HairColors.Add(ColorsList.Color.FromUnityColor(color));
+            }
+
+            foreach (var color in enemyManager.SkinTones) {
+                colors.SkinTones.Add(ColorsList.Color.FromUnityColor(color));
+            }
+
+            if (JsonUtils.TrySerialize(Plugin.PluginResources, "ColorsList.json", colors, false)) {
+                Plugin.Log.Info($"ColorsList.json was created in {Plugin.PluginResources}");
+            } else {
+                Plugin.Log.Info("ColorsList.json was NOT created");
+            }
+        } catch (Exception ex) {
+            Plugin.Log.Error(ex.Message);
+        }
+    }
 }

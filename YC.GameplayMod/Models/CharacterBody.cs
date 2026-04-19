@@ -1,15 +1,19 @@
 ﻿namespace YC.GameplayMod.Models;
-internal class CharacterBody {
-    public float Muscle { get; set; }
-    public float Torso { get; set; }
-    public float Hips { get; set; }
-    public float Belly { get; set; }
-    public float Arms { get; set; }
-    public float Biceps { get; set; }
-    public float Thighs { get; set; }
-    public float Calves { get; set; }
-    public float Boobs { get; set; }
-    public int AreolaIndex { get; set; }
-    public float Booty { get; set; }
-    public float Dick { get; set; }
+internal struct CharacterBody {
+    internal int Areola;
+    internal float Arms;
+    internal float Belly;
+    internal float Biceps;
+    internal float Boobs;
+    internal float Booty;
+    internal float Calves;
+    internal float Dick;
+    internal float Hips;
+    internal float Muscle;
+    internal float Thighs;
+    internal float Torso;
+
+    public override readonly string ToString() {
+        return $"Muscle: {Muscle}, Torso: {Torso}, Hips: {Hips}, Belly: {Belly}, Arms: {Arms}, Biceps: {Biceps}, Thighs: {Thighs}, Calves: {Calves}, Boobs: {Boobs}, Booty: {Booty}, Dick: {Dick}";
+    }
 }

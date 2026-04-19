@@ -112,7 +112,7 @@ public class GameTrainerComponent : MonoBehaviour {
 
         if (!_guiCtrlVisible && !_guiShiftVisible) {
             GUI.Label(new Rect(Screen.width - 260f, 10f, 200f, 20f), "Ctrl + F1: Show Trainer menu for Control key");
-            GUI.Label(new Rect(Screen.width - 260f, 30f, 200f, 20f), "Shift + F1: Show Trainer menu for Alt key");
+            GUI.Label(new Rect(Screen.width - 260f, 30f, 200f, 20f), "Shift + F1: Show Trainer menu for Shift key");
             return;
         }
 
@@ -156,17 +156,13 @@ public class GameTrainerComponent : MonoBehaviour {
 
     private void OpenAllWeapons() {
         try {
-            List<InventoryItem> weapons = [];
             foreach (var item in CharacterDataa.Instance.inventory.items) {
-                if (item.itemType is 1 && !item.itemName.Equals("Nothing") && !item.itemName.Equals("Unarmed"))
-                    weapons.Add(item);
-            }
-
-            foreach (var weapon in weapons) {
-                if (CharacterDataa.Instance.equippedWeapon != weapon.id) {
-                    Plugin.Log.Debug($"Remove weapon: {weapon.itemName}");
-                    CharacterDataa.Instance.inventory.RemoveItemById(weapon.id, 1);
-                }
+                if (item.itemType is 1 && !item.itemName.Equals("Nothing") && !item.itemName.Equals("Unarmed")) {
+                    if (item.quality < 4) {
+                        for (int i = item.quality; i <= 4; i++)
+                            CharacterDataa.Instance.inventory.UpgradeItemQualityById(item.id);
+                    }
+                }   
             }
 
             List<CombatWeapon> newWeapons = [.. _combatHolder.weapons];
@@ -175,11 +171,11 @@ public class GameTrainerComponent : MonoBehaviour {
             foreach (var newWeapon in newWeapons) {
                 if (!CharacterDataa.Instance.inventory.HasItem(newWeapon.itemName)) {
                     Plugin.Log.Debug($"Add weapon: {newWeapon.itemName}");
-                    CharacterDataa.Instance.inventory.AddItem(newWeapon.itemName, newWeapon.itemType, 1, newWeapon.itemQuality, newWeapon.itemPrice);
+                    CharacterDataa.Instance.inventory.AddItem(newWeapon.itemName, newWeapon.itemType, 1, 4, newWeapon.itemPrice);
                 }
             }
 
-            _console.ConsoleWrite( "All weapons was opened" );
+            _console.ConsoleWrite("All weapons was opened and upgraded");
         } catch (Exception e) {
             Plugin.Log.Error(e);
         }
@@ -187,16 +183,12 @@ public class GameTrainerComponent : MonoBehaviour {
 
     private void OpenAllTrinkets() {
         try {
-            List<InventoryItem> trinkets = [];
             foreach (var item in CharacterDataa.Instance.inventory.items) {
-                if (item.itemType is 7 && !item.itemName.Equals("Nothing") && !item.itemName.Equals("Unarmed"))
-                    trinkets.Add(item);
-            }
-
-            foreach (var trinket in trinkets) {
-                if (CharacterDataa.Instance.equippedTrinket != trinket.id && CharacterDataa.Instance.equippedTrinket2 != trinket.id) {
-                    Plugin.Log.Debug($"Remove trinket: {trinket.itemName}");
-                    CharacterDataa.Instance.inventory.RemoveItemById(trinket.id, 1);
+                if (item.itemType is 7 && !item.itemName.Equals("Nothing") && !item.itemName.Equals("Unarmed")){
+                    if (item.quality < 4) {
+                        for (int i = item.quality; i <= 4; i++)
+                            CharacterDataa.Instance.inventory.UpgradeItemQualityById(item.id);
+                    }
                 }
             }
 
@@ -206,11 +198,11 @@ public class GameTrainerComponent : MonoBehaviour {
             foreach (var newTrinket in newTrinkets) {
                 if (!CharacterDataa.Instance.inventory.HasItem(newTrinket.itemName)) {
                     Plugin.Log.Debug($"Add trinket: {newTrinket.itemName}");
-                    CharacterDataa.Instance.inventory.AddItem(newTrinket.itemName, newTrinket.itemType, 1, newTrinket.itemQuality, newTrinket.itemPrice);
+                    CharacterDataa.Instance.inventory.AddItem(newTrinket.itemName, newTrinket.itemType, 1, 4, newTrinket.itemPrice);
                 }
             }
 
-            _console.ConsoleWrite("All trinkets was opened");
+            _console.ConsoleWrite("All trinkets was opened and upgraded");
         } catch (Exception e) {
             Plugin.Log.Error(e);
         }
@@ -224,6 +216,14 @@ public class GameTrainerComponent : MonoBehaviour {
             foreach (var consumable in consumables) {
                 Plugin.Log.Debug($"Add consumable: {consumable.itemName} x100");
                 CharacterDataa.Instance.inventory.AddItem(consumable.itemName, consumable.itemType, 100, consumable.itemQuality, consumable.itemPrice);
+            }
+
+            List<CombatItem> questItems = [.. _combatHolder.questItems];
+            foreach (var questItem in questItems) {
+                if (!questItem.itemName.Equals("Credits")) {
+                    Plugin.Log.Debug($"Add consumable: {questItem.itemName} x100");
+                    CharacterDataa.Instance.inventory.AddItem(questItem.itemName, questItem.itemType, 100, questItem.itemQuality, questItem.itemPrice);
+                }
             }
 
             _console.ConsoleWrite("All scrolls and stones was added in your Inventory");

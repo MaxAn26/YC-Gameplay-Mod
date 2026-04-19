@@ -32,6 +32,15 @@
 		<Deterministic>false</Deterministic>
 	</PropertyGroup>
 
+	<ItemDefinitionGroup>
+		<PackageReference>
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<Reference>
+			<Private>false</Private>
+		</Reference>
+	</ItemDefinitionGroup>
+
 	<ItemGroup>
 		<PackageReference Include="LavaGang.MelonLoader" Version="0.7.2" />
 		<PackageReference Include="Samboy063.Tomlet" Version="6.2.0" />

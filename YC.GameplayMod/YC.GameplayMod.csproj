@@ -55,12 +55,18 @@
 			<HintPath>..\Libs\0Harmony.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
+		<Reference Include="Il2Cppcom.gator-dragon-games.jigglephysics">
+		  <HintPath>..\Libs\Il2Cppcom.gator-dragon-games.jigglephysics.dll</HintPath>
+		</Reference>
 		<Reference Include="Il2CppInterop.Runtime">
 			<HintPath>..\Libs\Il2CppInterop.Runtime.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="Assembly-CSharp">
 			<HintPath>..\Libs\Assembly-CSharp.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppMagicaClothV2">
+		  <HintPath>..\Libs\Il2CppMagicaClothV2.dll</HintPath>
 		</Reference>
 		<Reference Include="Il2Cppmscorlib">
 			<HintPath>..\Libs\Il2Cppmscorlib.dll</HintPath>
@@ -86,8 +92,7 @@
 
 		<ItemGroup>
 			<ModDll Include="$(TargetDir)$(TargetFileName)" />
-			<UserLibs Include="$(TargetDir)*.dll"
-					  Exclude="$(TargetDir)$(TargetFileName)" />
+			<UserLibs Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName)" />
 			<PreConfiguredFiles Include="$(ProjectDir)PreConfiguredFiles\**\*.*" />
 		</ItemGroup>
 
@@ -97,14 +102,9 @@
 		<RemoveDir Directories="$(OutUserDataDir)" />
 		<MakeDir Directories="$(OutUserDataDir)" />
 
-		<Copy SourceFiles="@(ModDll)"
-			  DestinationFolder="$(OutModsDir)"
-			  SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(UserLibs)"
-			  DestinationFolder="$(OutUserLibsDir)"
-			  SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(PreConfiguredFiles)"
-			  DestinationFolder="$(OutUserDataDir)%(RecursiveDir)" />
+		<Copy SourceFiles="@(ModDll)" DestinationFolder="$(OutModsDir)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(UserLibs)" DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(OutUserDataDir)%(RecursiveDir)" />
 	</Target>
 
 	<Target Name="PostPublish" AfterTargets="Publish" Condition="'$(Configuration)'=='Release'">
@@ -117,8 +117,7 @@
 
 		<ItemGroup>
 			<ModDll Include="$(TargetDir)$(TargetFileName)" />
-			<UserLibs Include="$(TargetDir)*.dll"
-					  Exclude="$(TargetDir)$(TargetFileName)" />
+			<UserLibs Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName)" />
 			<PreConfiguredFiles Include="$(ProjectDir)PreConfiguredFiles\**\*.*" />
 			<ReadmeFiles Include="$(ProjectDir)$(TargetName)_Readme.*" />
 		</ItemGroup>
@@ -128,19 +127,11 @@
 		<MakeDir Directories="$(OutUserLibsDir)" />
 		<MakeDir Directories="$(OutUserDataDir)" />
 
-		<Copy SourceFiles="@(ModDll)"
-			  DestinationFolder="$(OutModsDir)"
-			  SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(UserLibs)"
-			  DestinationFolder="$(OutUserLibsDir)"
-			  SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(PreConfiguredFiles)"
-			  DestinationFolder="$(OutUserDataDir)%(RecursiveDir)" />
-		<Copy SourceFiles="@(ReadmeFiles)"
-			  DestinationFolder="$(OutBaseDir)" />
+		<Copy SourceFiles="@(ModDll)" DestinationFolder="$(OutModsDir)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(UserLibs)" DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(OutUserDataDir)%(RecursiveDir)" />
+		<Copy SourceFiles="@(ReadmeFiles)" DestinationFolder="$(OutBaseDir)" />
 
-		<ZipDirectory SourceDirectory="$(OutBaseDir)"
-					  DestinationFile="$(SolutionDir)@Release\$(AssemblyName)-$(AssemblyVersion).zip"
-					  Overwrite="true" />
+		<ZipDirectory SourceDirectory="$(OutBaseDir)" DestinationFile="$(SolutionDir)@Release\$(AssemblyName)-$(AssemblyVersion).zip" Overwrite="true" />
 	</Target>
 </Project>

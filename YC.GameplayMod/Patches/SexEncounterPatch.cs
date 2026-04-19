@@ -23,7 +23,8 @@ internal class SexEncounterPatch {
     [HarmonyPrefix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetDicks))]
-    static bool SexEncounterSetDicksPrefix(SexEncounter __instance, bool __runOriginal) {
+    static bool SexEncounterSetDicksPrefix(ref SexEncounter __instance, bool __runOriginal) {
+        GameFixMod.SexEncounerSetSexAnimation(ref __instance);
         bool result = DickStraponVisibilityMod.SetDicks(__instance);
 
         if (!__runOriginal)

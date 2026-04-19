@@ -1,16 +1,38 @@
-﻿namespace YC.GameplayMod.Models;
+﻿using BaseMod.Core.Utils;
+
+namespace YC.GameplayMod.Models;
 public class BodyProfile {
+    public int Id { get; set; }
     public string Name { get; set; }
-    public float Muscle { get; set; } = 1.0f;
-    public float Torso { get; set; } = 1.0f;
-    public float Hips { get; set; } = 1.0f;
-    public float Belly { get; set; } = 1.0f;
-    public float Arms { get; set; } = 1.0f;
-    public float Biceps { get; set; } = 1.0f;
-    public float Thighs { get; set; } = 1.0f;
-    public float Calves { get; set; } = 1.0f;
-    public float Boobs { get; set; } = 1.0f;
-    public int AreolaSize { get; set; } = 3;
-    public float Booty { get; set; } = 1.0f;
-    public float Dick { get; set; } = 1.0f;
+
+    public BodySizeInt Areola { get; set; } = new();
+    public BodySizeFloat Arms { get; set; } = new();
+    public BodySizeFloat Belly { get; set; } = new();
+    public BodySizeFloat Biceps { get; set; } = new();
+    public BodySizeFloat Boobs { get; set; } = new();
+    public BodySizeFloat Booty { get; set; } = new();
+    public BodySizeFloat Calves { get; set; } = new();
+    public BodySizeFloat Dick { get; set; } = new();
+    public BodySizeFloat Hips { get; set; } = new();
+    public BodySizeFloat Muscle { get; set; } = new();
+    public BodySizeFloat Torso { get; set; } = new();
+    public BodySizeFloat Thighs { get; set; } = new();
+
+    public class BodySizeInt {
+        public int Base { get; set; } = 1;
+        public int Variation { get; set; } = 1;
+
+        internal int GetSize(int extraVariation = 0) {
+            return Base + RandomUtils.Int32(-Variation + extraVariation, Variation + extraVariation);
+        }
+    }
+
+    public class BodySizeFloat {
+        public float Base { get; set; } = 1.0f;
+        public float Variation { get; set; } = 0.15f;
+
+        internal float GetSize(float extraVariation = 0f) {
+            return Base + RandomUtils.Float(-Variation + extraVariation, Variation + extraVariation);
+        }
+    }
 }

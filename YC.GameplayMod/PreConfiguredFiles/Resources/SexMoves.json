@@ -687,7 +687,21 @@
   },
   {
     "IsDisabled": false,
-    "Type": 1,
+    "Type": 2,
+    "ID": 72,
+    "Name": "Kissing handjob",
+    "Description": "Kiss your partner and give them a handjob",
+    "CasterGender": "Any",
+    "CasterRole": "Any",
+    "TargetGender": "Any",
+    "TargetRole": "Any",
+    "IsCommand": false,
+    "IsPerform": false,
+    "SexTags": "Sensual, Service, Universal"
+  },
+  {
+    "IsDisabled": false,
+    "Type": 2,
     "ID": 74,
     "Name": "Spoiling handjob (Perform)",
     "Description": "Grab your partner and perform a handjob",
@@ -701,7 +715,7 @@
   },
   {
     "IsDisabled": false,
-    "Type": 1,
+    "Type": 2,
     "ID": 75,
     "Name": "Spoiling handjob (Command)",
     "Description": "Command your partner to spoil you and give you a handjob",
@@ -2619,7 +2633,7 @@
   },
   {
     "IsDisabled": false,
-    "Type": 1,
+    "Type": 7,
     "ID": 335,
     "Name": "Trapped doggystyle",
     "Description": "Get your partner into a doggystyle position",
@@ -2630,6 +2644,20 @@
     "IsCommand": false,
     "IsPerform": true,
     "SexTags": "Dominant"
+  },
+  {
+    "IsDisabled": false,
+    "Type": 7,
+    "ID": 336,
+    "Name": "Tight doggystyle",
+    "Description": "Get your partner into a doggystyle position",
+    "CasterGender": "Futa, Male",
+    "CasterRole": "Active",
+    "TargetGender": "Any",
+    "TargetRole": "Any",
+    "IsCommand": false,
+    "IsPerform": true,
+    "SexTags": "Dominant, Generic"
   },
   {
     "IsDisabled": false,
