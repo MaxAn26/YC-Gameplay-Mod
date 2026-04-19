@@ -84,7 +84,7 @@
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<PropertyGroup>
-			<OutBaseDir>$(SolutionDir)@Mods\</OutBaseDir>
+			<OutBaseDir>..\@Mods\</OutBaseDir>
 			<OutModsDir>$(OutBaseDir)Mods\</OutModsDir>
 			<OutUserLibsDir>$(OutBaseDir)UserLibs\</OutUserLibsDir>
 			<OutUserDataDir>$(OutBaseDir)UserData\$(AssemblyName)\</OutUserDataDir>
@@ -109,7 +109,8 @@
 
 	<Target Name="PostPublish" AfterTargets="Publish" Condition="'$(Configuration)'=='Release'">
 		<PropertyGroup>
-			<OutBaseDir>$(SolutionDir)@Release\$(AssemblyName)\</OutBaseDir>
+			<OutReleaseDir>..\@Release\</OutReleaseDir>
+			<OutBaseDir>$(OutReleaseDir)$(AssemblyName)\</OutBaseDir>
 			<OutModsDir>$(OutBaseDir)Mods\</OutModsDir>
 			<OutUserLibsDir>$(OutBaseDir)UserLibs\</OutUserLibsDir>
 			<OutUserDataDir>$(OutBaseDir)UserData\$(AssemblyName)\</OutUserDataDir>
@@ -132,6 +133,6 @@
 		<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(OutUserDataDir)%(RecursiveDir)" />
 		<Copy SourceFiles="@(ReadmeFiles)" DestinationFolder="$(OutBaseDir)" />
 
-		<ZipDirectory SourceDirectory="$(OutBaseDir)" DestinationFile="$(SolutionDir)@Release\$(AssemblyName)-$(AssemblyVersion).zip" Overwrite="true" />
+		<ZipDirectory SourceDirectory="$(OutBaseDir)" DestinationFile="$(OutReleaseDir)$(AssemblyName)-$(AssemblyVersion).zip" Overwrite="true" />
 	</Target>
 </Project>
