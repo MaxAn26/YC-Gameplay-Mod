@@ -1,5 +1,6 @@
-﻿namespace YC.GameplayMod.Models;
-public class BodyRestrictions {
+namespace YC.GameplayMod.Models;
+public class BodyRestrictions
+{
     public ValueRestrictions<int> Areola { get; set; } = new();
     public ValueRestrictions<float> Arms { get; set; } = new();
     public ValueRestrictions<float> Belly { get; set; } = new();
@@ -13,7 +14,8 @@ public class BodyRestrictions {
     public ValueRestrictions<float> Torso { get; set; } = new();
     public ValueRestrictions<float> Thighs { get; set; } = new();
 
-    public class ValueRestrictions<T> {
+    public class ValueRestrictions<T>
+    {
         public T Min { get; set; }
         public T Max { get; set; }
     }

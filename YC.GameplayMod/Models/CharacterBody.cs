@@ -1,5 +1,6 @@
-﻿namespace YC.GameplayMod.Models;
-internal struct CharacterBody {
+namespace YC.GameplayMod.Models;
+internal struct CharacterBody
+{
     internal int Areola;
     internal float Arms;
     internal float Belly;
@@ -13,7 +14,5 @@ internal struct CharacterBody {
     internal float Thighs;
     internal float Torso;
 
-    public override readonly string ToString() {
-        return $"Muscle: {Muscle}, Torso: {Torso}, Hips: {Hips}, Belly: {Belly}, Arms: {Arms}, Biceps: {Biceps}, Thighs: {Thighs}, Calves: {Calves}, Boobs: {Boobs}, Booty: {Booty}, Dick: {Dick}";
-    }
+    public override readonly string ToString() => $"Muscle: {Muscle}, Torso: {Torso}, Hips: {Hips}, Belly: {Belly}, Arms: {Arms}, Biceps: {Biceps}, Thighs: {Thighs}, Calves: {Calves}, Boobs: {Boobs}, Booty: {Booty}, Dick: {Dick}";
 }

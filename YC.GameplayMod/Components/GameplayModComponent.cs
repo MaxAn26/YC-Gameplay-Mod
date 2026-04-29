@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using BaseMod.Core.Extensions;
 using BaseMod.Core.Utils;
@@ -14,7 +14,8 @@ using YC.GameplayMod.Models;
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Components;
-public class GameplayModComponent : MonoBehaviour {
+public class GameplayModComponent : MonoBehaviour
+{
     private bool _componentInitialized = false;
     private bool _sexInteractionSet = false;
     private CharacterRole _characterRole = CharacterRole.None;
@@ -25,65 +26,78 @@ public class GameplayModComponent : MonoBehaviour {
     internal int CumsCount { get; set; } = 0;
     internal int SexCount { get; set; } = 0;
     internal int PersonalityId { get; set; }
-    internal bool IsActiveRole => _characterRole switch { 
+    internal bool IsActiveRole => _characterRole switch
+    {
         CharacterRole.Active => true,
         CharacterRole.Passive => false,
-        CharacterRole.Any => RandomUtils.Chance( Sex.IsFuta || ( Sex.IsMale && !Sex.IsFemboy) ? 75 : 50 ),
+        CharacterRole.Any => RandomUtils.Chance(Sex.IsFuta || Sex.IsMale && !Sex.IsFemboy ? 75 : 50),
         _ => false,
     };
 
-    static GameplayModComponent() {
-        ClassInjector.RegisterTypeInIl2Cpp<GameplayModComponent>();
-    }
+    static GameplayModComponent() => ClassInjector.RegisterTypeInIl2Cpp<GameplayModComponent>();
 
-    public GameplayModComponent() : base(ClassInjector.DerivedConstructorPointer<GameplayModComponent>()) {
-        ClassInjector.DerivedConstructorBody(this);
-    }
+    public GameplayModComponent() : base(pointer: ClassInjector.DerivedConstructorPointer<GameplayModComponent>()) => ClassInjector.DerivedConstructorBody(this);
 
-    public GameplayModComponent(IntPtr pointer) : base(pointer) {
+    public GameplayModComponent(IntPtr pointer) : base(pointer) { }
 
-    }
-
-    public void Initialize() {
-        try {
+    public void Initialize()
+    {
+        try
+        {
             if (!SexChoiceRealismMod.IsModActive)
+            {
                 Destroy(this);
+            }
 
             if (_componentInitialized)
+            {
                 return;
+            }
 
-            if (gameObject.TryGetComponentWithCast(out CharacterSex characterSex)) {
+            if (gameObject.TryGetComponentWithCast(out CharacterSex characterSex))
+            {
                 Plugin.Log.Info($"Register class for character {characterSex.characterName}");
                 Sex = characterSex;
 
                 LateInitialize();
-            } else {
+            }
+            else
+            {
                 Destroy(this);
             }
 
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             Plugin.Log.Error(e);
             Destroy(this);
         }
     }
 
-    public void LateUpdate() {
+    public void LateUpdate()
+    {
         LateInitialize();
 
-        if (Sex.IsCumming) {
-            if (!_sexInteractionSet) {
+        if (Sex.IsCumming)
+        {
+            if (!_sexInteractionSet)
+            {
                 _sexInteractionSet = true;
 
                 SexCount++;
-                if (Sex.ThisCharacterCumming) {
+                if (Sex.ThisCharacterCumming)
+                {
                     CumsCount++;
                 }
 
-                if (CharacterDataa.Instance.adultSettingsDATA.messyMakeup && (CumsCount >= 2 || SexCount >= 5)) {
+                if (CharacterDataa.Instance.adultSettingsDATA.messyMakeup && (CumsCount >= 2 || SexCount >= 5))
+                {
                     Sex.SetMessyMakeup();
                 }
             }
-        } else {
+        }
+        else
+        {
             _sexInteractionSet = false;
         }
     }
@@ -112,44 +126,56 @@ public class GameplayModComponent : MonoBehaviour {
     }*/
 
     [HideFromIl2Cpp]
-    public static void RegisterClass(MonoBehaviour monoBehaviour) {
-        monoBehaviour.gameObject.AddComponentWithAction<GameplayModComponent>(component => component.Initialize());
-    }
+    public static void RegisterClass(MonoBehaviour monoBehaviour) => monoBehaviour.gameObject.AddComponentWithAction<GameplayModComponent>(component => component.Initialize());
 
-    private void LateInitialize() {
+    private void LateInitialize()
+    {
         if (Attributes is null || _componentInitialized)
+        {
             return;
+        }
 
         _characterRole = DefineCharacterRole(Sex.CharacterRole);
 
-        if (Attributes.isPlayer) {
+        if (Attributes.isPlayer)
+        {
             PersonalityId = CharacterDataa.Instance.adultSettingsDATA.SexGameplayAI;
-        } else {
+        }
+        else
+        {
             PersonalityId = Attributes.enemyData?.statsDATA.EnemyPersonality ?? 0;
 
-            if ( Attributes.isAreaBoss || Attributes.combatAI.isElite == true ) {
-                if ( SexChoiceRealismMod.RandomPersonalityElite.Value )
+            if (Attributes.isAreaBoss || Attributes.combatAI.isElite == true)
+            {
+                if (SexChoiceRealismMod.RandomPersonalityElite.Value)
+                {
                     PersonalityId = RandomUtils.Int32(1, 6);
-            } else if (Attributes.combatAI.isAlly) {
-                if( SexChoiceRealismMod.RandomPersonalityAlly.Value )
+                }
+            }
+            else if (Attributes.combatAI.isAlly)
+            {
+                if (SexChoiceRealismMod.RandomPersonalityAlly.Value)
+                {
                     PersonalityId = RandomUtils.Int32(1, 6);
-            } else if (SexChoiceRealismMod.RandomPersonalityEnemy.Value) {
+                }
+            }
+            else if (SexChoiceRealismMod.RandomPersonalityEnemy.Value)
+            {
                 PersonalityId = RandomUtils.Int32(1, 6);
             }
         }
 
-        Plugin.Log.Info( $"{Sex.characterName}: Role: {_characterRole}, PersonalityId: {PersonalityId}" );
+        Plugin.Log.Info($"{Sex.characterName}: Role: {_characterRole}, PersonalityId: {PersonalityId}");
 
         _componentInitialized = true;
     }
 
-    private static CharacterRole DefineCharacterRole(int roleId) {
-        return roleId switch {
-            0 => CharacterRole.Passive,
-            1 => CharacterRole.Active,
-            2 => CharacterRole.Any,
-            3 => RandomUtils.Chance(50) ? CharacterRole.Active : CharacterRole.Passive,
-            _ => CharacterRole.Any,
-        };
-    }
+    private static CharacterRole DefineCharacterRole(int roleId) => roleId switch
+    {
+        0 => CharacterRole.Passive,
+        1 => CharacterRole.Active,
+        2 => CharacterRole.Any,
+        3 => RandomUtils.Chance(50) ? CharacterRole.Active : CharacterRole.Passive,
+        _ => CharacterRole.Any,
+    };
 }

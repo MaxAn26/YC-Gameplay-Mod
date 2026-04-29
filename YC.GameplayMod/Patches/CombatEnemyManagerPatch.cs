@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Xml.Linq;
@@ -14,14 +14,21 @@ using UnityEngine;
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Patches;
-public class CombatEnemyManagerPatch {
-    internal static bool Prepare() {
-        try {
+public class CombatEnemyManagerPatch
+{
+    internal static bool Prepare()
+    {
+        try
+        {
             if (!CharacterBodyRandomizerMod.IsModActive)
+            {
                 return false;
+            }
 
             return true;
-        } catch (Exception) {
+        }
+        catch (Exception)
+        {
             Plugin.Log.Warn($"{nameof(CombatEnemyManagerPatch)} not applied due exeption");
             return false;
         }
@@ -31,13 +38,18 @@ public class CombatEnemyManagerPatch {
     [HarmonyPrefix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(CombatEnemyManager), nameof(CombatEnemyManager.RequestCharacterByName))]
-    static bool CombatEnemyManagerRequestCharacterByNamePrefix(CombatEnemyManager __instance, bool __runOriginal, string characterName) {
+    static bool CombatEnemyManagerRequestCharacterByNamePrefix(bool __runOriginal, string characterName)
+    {
         Plugin.Log.Info($"Request character: {characterName}");
         if (!string.IsNullOrWhiteSpace(characterName))
+        {
             _requested = true;
+        }
 
         if (!__runOriginal)
+        {
             return false;
+        }
 
         return true;
     }
@@ -45,11 +57,15 @@ public class CombatEnemyManagerPatch {
     [HarmonyPostfix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(CombatEnemyManager), nameof(CombatEnemyManager.RequestCharacterByName))]
-    static void CombatEnemyManagerRequestCharacterByNamePostfix(CombatEnemyManager __instance, GameObject __result, string characterName) {
+    static void CombatEnemyManagerRequestCharacterByNamePostfix(CombatEnemyManager __instance, GameObject __result, string characterName)
+    {
         if (__result is null)
+        {
             return;
+        }
 
-        if (__result.TryGetComponentWithCast(out CharacterSex characterSex) && !string.IsNullOrWhiteSpace(characterSex.characterName)) {
+        if (__result.TryGetComponentWithCast(out CharacterSex characterSex) && !string.IsNullOrWhiteSpace(characterSex.characterName))
+        {
             Plugin.Log.Info($"Customize character: {characterSex.characterName}");
             CharacterBodyRandomizerMod.Randomize(__instance, characterSex);
             characterSex.NPCSetup(characterSex.IsMale, characterSex.characterName, characterSex.characterAttributes.combatAI.isAlly);
@@ -71,28 +87,37 @@ public class CombatEnemyManagerPatch {
     [HarmonyPostfix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(Wardrobe), nameof(Wardrobe.LoadStuff))]
-    static void WardrobeLoadStuffPostfix(Wardrobe __instance) {
+    static void WardrobeLoadStuffPostfix(Wardrobe __instance)
+    {
         if (_requested)
+        {
             Plugin.Log.Info($"Load wardrobe character: {__instance.characterSex.characterName}");
+        }
     }
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(CharacterSex), nameof(CharacterSex.Start))]
-    static void CharacterSexStartPostfix(CharacterSex __instance) {
+    static void CharacterSexStartPostfix(CharacterSex __instance)
+    {
         if (_requested)
+        {
             Plugin.Log.Info($"Start CharacterSex character: {__instance.characterName}");
+        }
     }
 
     [HarmonyPrefix]
     [HarmonyWrapSafe]
     [HarmonyPatch(typeof(CombatEnemyManager), nameof(CombatEnemyManager.RandomizeEnemy))]
-    static bool CombatEnemyManagerRandomizeEnemyPrefix(CombatEnemyManager __instance, bool __runOriginal) {
+    static bool CombatEnemyManagerRandomizeEnemyPrefix(bool __runOriginal)
+    {
         //_requested = true;
         Plugin.Log.Debug($"randomize enemy");
 
         if (!__runOriginal)
+        {
             return false;
+        }
 
         return true;
     }

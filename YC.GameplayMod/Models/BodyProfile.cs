@@ -1,7 +1,8 @@
-﻿using BaseMod.Core.Utils;
+using BaseMod.Core.Utils;
 
 namespace YC.GameplayMod.Models;
-public class BodyProfile {
+public class BodyProfile
+{
     public int Id { get; set; }
     public string Name { get; set; }
 
@@ -18,21 +19,19 @@ public class BodyProfile {
     public BodySizeFloat Torso { get; set; } = new();
     public BodySizeFloat Thighs { get; set; } = new();
 
-    public class BodySizeInt {
+    public class BodySizeInt
+    {
         public int Base { get; set; } = 1;
         public int Variation { get; set; } = 1;
 
-        internal int GetSize(int extraVariation = 0) {
-            return Base + RandomUtils.Int32(-Variation + extraVariation, Variation + extraVariation);
-        }
+        internal int GetSize(int extraVariation = 0) => Base + RandomUtils.Int32(-Variation + extraVariation, Variation + extraVariation);
     }
 
-    public class BodySizeFloat {
+    public class BodySizeFloat
+    {
         public float Base { get; set; } = 1.0f;
         public float Variation { get; set; } = 0.15f;
 
-        internal float GetSize(float extraVariation = 0f) {
-            return Base + RandomUtils.Float(-Variation + extraVariation, Variation + extraVariation);
-        }
+        internal float GetSize(float extraVariation = 0f) => Base + RandomUtils.Float(-Variation + extraVariation, Variation + extraVariation);
     }
 }

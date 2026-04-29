@@ -1,7 +1,8 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 namespace BaseMod.Core.Logger;
-public interface IPluginLogger {
+public interface IPluginLogger
+{
     void Debug(string message, [CallerMemberName] string callerName = "", [CallerFilePath] string filePath = "");
     void Error(Exception exception, [CallerMemberName] string callerName = "", [CallerFilePath] string filePath = "");
     void Error(string message, [CallerMemberName] string callerName = "", [CallerFilePath] string filePath = "");

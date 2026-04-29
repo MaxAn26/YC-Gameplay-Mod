@@ -1,26 +1,35 @@
-﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 using HarmonyLib;
 
 using Il2Cpp;
 
+using Il2CppMagicaCloth2;
+
+using Il2CppTriangleNet.Meshing.Algorithm;
+
 using MelonLoader.Utils;
 
 using UnityEngine;
 
+using static Il2CppMagicaCloth2.Define;
+
 namespace YC.GameplayMod.Patches;
-internal class DebugPatch {
+internal class DebugPatch
+{
     private static string _logFile = "GameLog.txt";
 
-    internal static bool Prepare() {
-        try {
-            _logFile = $"GameLog-{DateTime.Now:dd_MM_yy-HH_mm_ss}.txt";
+    internal static bool Prepare()
+    {
+        try
+        {
+            _logFile = $"GameLog-{System.DateTime.Now:dd_MM_yy-HH_mm_ss}.txt";
 
             return true;
-        } catch (Exception) {
+        }
+        catch (System.Exception)
+        {
             Plugin.Log.Warn($"{nameof(DebugPatch)} not applied due exeption");
             return false;
         }
@@ -33,22 +42,25 @@ internal class DebugPatch {
     [HarmonyPatch(typeof(Debug), nameof(Debug.LogWarning), [typeof(Il2CppSystem.Object)])]
     [HarmonyPatch(typeof(Debug), nameof(Debug.LogError), [typeof(Il2CppSystem.Object)])]
     [HarmonyPatch(typeof(Debug), nameof(Debug.LogAssertion), [typeof(Il2CppSystem.Object)])]
-    static bool DebugLogPrefix(bool __runOriginal, ref Il2CppSystem.Object message) {
+    static bool DebugLogPrefix(bool __runOriginal, ref Il2CppSystem.Object message)
+    {
         string log = Path.Combine(MelonEnvironment.MelonLoaderLogsDirectory, _logFile);
 
-        File.AppendAllText( log, $"[{System.DateTime.Now:HH:mm:ss}] {message.ToString()}\r\n");
+        File.AppendAllText(log, $"[{System.DateTime.Now:HH:mm:ss}] {message.ToString()}\r\n");
 
         if (!__runOriginal)
+        {
             return false;
+        }
 
         return true;
     }
 
     /*[HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.CompleteClothingSetup), [typeof(LoadContext), typeof(GameObject)])]
-    static bool Wardrobe2CompleteClothingSetupPrefix(Wardrobe2 __instance, bool __runOriginal, LoadContext SetContext, GameObject TargetObjt) {
-        Plugin.Log.Debug($"Prefix CompleteClothingSetup, context: {SetContext.Sex.characterName}, target object: {TargetObjt.name}");
+    [HarmonyPatch(typeof(WardrobeLibrary), nameof(WardrobeLibrary.ApplyHair))]
+    static bool WardrobeLibraryApplyHairPrefix(WardrobeLibrary __instance, bool __runOriginal, ref HairSet hairSet, HairLibrary library, int hairIndex, Color hairColor, float hairAlpha, bool isEnemy, GameObject owner, List<ColliderComponent> colliders, bool isSetB, Material sourceMat) {
+        Plugin.Log.Debug( $"{hairSet}, {library}, {hairIndex}, {hairColor}, {hairAlpha}, {(isEnemy ? "enemy" : "not enemy")}, {owner.name}, {(isSetB ? "SetB" : "SetA")}, {sourceMat.name}" );
 
         if (!__runOriginal)
             return false;
@@ -58,73 +70,52 @@ internal class DebugPatch {
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.CompleteClothingSetup), [typeof(LoadContext), typeof(GameObject)])]
-    static void Wardrobe2CompleteClothingSetupPostfix(Wardrobe2 __instance, LoadContext SetContext, GameObject TargetObjt) {
-        Plugin.Log.Debug($"Postfix CompleteClothingSetup, context: {SetContext.Sex.characterName}, target object: {TargetObjt.name}");
-    }
-
-    [HarmonyPrefix]
-    [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.CompleteClothingSetup), [typeof(CharacterSex), typeof(LoadContext), typeof(GameObject)])]
-    static bool Wardrobe2CompleteClothingSetup2Prefix(Wardrobe2 __instance, bool __runOriginal, CharacterSex PlayerSex, LoadContext SetContext, GameObject TargetObjt) {
-        Plugin.Log.Debug($"Prefix CompleteClothingSetup, player: {PlayerSex.characterName} context: {SetContext.Sex.characterName}, target object: {TargetObjt.name}");
-
-        if (!__runOriginal)
-            return false;
-
-        return true;
+    [HarmonyPatch(typeof(WardrobeLibrary), nameof(WardrobeLibrary.ApplyHair))]
+    static void WardrobeLibraryApplyHairPostfix(WardrobeLibrary __instance, ref HairSet hairSet, HairLibrary library, int hairIndex, Color hairColor, float hairAlpha, bool isEnemy, GameObject owner, List<ColliderComponent> colliders, bool isSetB, Material sourceMat) {
+        Plugin.Log.Debug($"{hairSet.hairMat.name}, {library}, {hairIndex}, {hairColor}, {hairAlpha}, {(isEnemy ? "enemy" : "not enemy")}, {owner.name}, {(isSetB ? "SetB" : "SetA")}, {sourceMat.name}");
     }
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.CompleteClothingSetup), [typeof(CharacterSex), typeof(LoadContext), typeof(GameObject)])]
-    static void Wardrobe2CompleteClothingSetup2Postfix(Wardrobe2 __instance, CharacterSex PlayerSex, LoadContext SetContext, GameObject TargetObjt) {
-        Plugin.Log.Debug($"Postfix CompleteClothingSetup, player: {PlayerSex.characterName} context: {SetContext.Sex.characterName}, target object: {TargetObjt.name}");
-    }
-
-    [HarmonyPrefix]
-    [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.LoadStuff), [typeof(bool)])]
-    static bool Wardrobe2LoadStuffPrefix(Wardrobe2 __instance, bool __runOriginal, bool isEnemyChar) {
-        Plugin.Log.Debug($"Prefix load, isEnemy: {(isEnemyChar ? "Yes" : "No")}");
-
-        if (!__runOriginal)
-            return false;
-
-        return true;
+    [HarmonyPatch(typeof(WardrobeLibrary), nameof(WardrobeLibrary.GetEnemyHairMaterial))]
+    static void WardrobeLibraryGetEnemyHairMaterialPostfix(WardrobeLibrary __instance, Material __result, int hairIndex, Color hairColor, float hairAlpha, Material source) {
+        Plugin.Log.Debug($"{hairIndex}, {hairColor}, {hairAlpha}, {source.name}");
     }
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.LoadStuff), [typeof(bool)])]
-    static void Wardrobe2LoadStuffPostfix(Wardrobe2 __instance, bool isEnemyChar) {
-        Plugin.Log.Debug($"Postfix load, isEnemy: {(isEnemyChar ? "Yes" : "No")}");
-    }
-
-    [HarmonyPrefix]
-    [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.LoadStuff), [typeof(bool), typeof(GameObject), typeof(EnemyData)])]
-    static bool Wardrobe2LoadStuff2Prefix(Wardrobe2 __instance, bool __runOriginal, bool isEnemyChar, GameObject UseObjt, EnemyData UseData) {
-        Plugin.Log.Debug($"Prefix load, isEnemy: {(isEnemyChar ? "Yes" : "No")}, use object: {UseObjt.name}, enemy data: {UseData.characterName}");
-
-        if (!__runOriginal)
-            return false;
-
-        return true;
+    [HarmonyPatch(typeof(WardrobeLibrary), nameof(WardrobeLibrary.GetPlayerHairMaterial))]
+    static void WardrobeLibraryGetPlayerHairMaterialPostfix(WardrobeLibrary __instance, Material __result, GameObject owner, Color hairColor, float hairAlpha, Material source) {
+        Plugin.Log.Debug($"{owner.name}, {hairColor}, {hairAlpha}, {source.name}");
     }
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.LoadStuff), [typeof(bool), typeof(GameObject), typeof(EnemyData)])]
-    static void Wardrobe2LoadStuff2Postfix(Wardrobe2 __instance, bool isEnemyChar, GameObject UseObjt, EnemyData UseData) {
-        Plugin.Log.Debug($"Postfix load, isEnemy: {(isEnemyChar ? "Yes" : "No")}, use object: {UseObjt.name}, enemy data: {UseData.characterName}");
+    [HarmonyPatch(typeof(WardrobeLibrary), nameof(WardrobeLibrary.GetPlayerHairBMaterial))]
+    static void WardrobeLibraryGetPlayerHairBMaterialPostfix(WardrobeLibrary __instance, Material __result, GameObject owner, Color hairColor, float hairAlpha, Material source) {
+        Plugin.Log.Debug($"{owner.name}, {hairColor}, {hairAlpha}, {source.name}");
     }
 
-    [HarmonyPrefix]
+    [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.LoadClothingBySlot))]
-    static bool Wardrobe2LoadClothingBySlotPrefix(Wardrobe2 __instance, bool __runOriginal, int slot, int Idder, GameObject TargetObjt, int materialIndex, Color materialColor, float materialSmoothness, LoadContext SetContext) {
-        Plugin.Log.Debug($"Prefix LoadClothingBySlot, slot: {slot}, idDer: {Idder}, Target object: {TargetObjt.name}, Material index: {materialIndex}, Color: {materialColor}, Smoothness: {materialSmoothness}");
+    [HarmonyPatch(typeof(Wardrobe), "set_HairSetA", MethodType.Setter)]
+    static void WardrobeHairSetAPostfix(Wardrobe __instance, HairSet value) {
+        Plugin.Log.Debug($"{value.hairMat.name}");
+    }
+
+    [HarmonyPostfix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(Wardrobe), "set_HairSetA", MethodType.Setter)]
+    static void WardrobeHairSetBPostfix(Wardrobe __instance, HairSet value) {
+        Plugin.Log.Debug($"{value.hairMat.name}");
+    }*/
+
+    /*[HarmonyPrefix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(SkinnedMeshRenderer), nameof(SkinnedMeshRenderer.SetBlendShapeWeight))]
+    static bool SkinnedMeshRendererSetBlendShapeWeightPrefix(SkinnedMeshRenderer __instance, bool __runOriginal, int index, float value) {
+        if (!__instance.name.StartsWith("Hidden") && !__instance.name.StartsWith("Zeit") && !__instance.name.StartsWith("Stencil"))
+            Plugin.Log.Debug($"{__instance.name}: index: {index}, value: {value}");
 
         if (!__runOriginal)
             return false;
@@ -132,11 +123,56 @@ internal class DebugPatch {
         return true;
     }*/
 
-    [HarmonyPostfix]
+    /*[HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(Wardrobe2), nameof(Wardrobe2.LoadClothingBySlot))]
-    static void Wardrobe2LoadClothingBySlotPostfix(Wardrobe2 __instance, int slot, int Idder, GameObject TargetObjt, int materialIndex, Color materialColor, float materialSmoothness, LoadContext SetContext) {
-        Plugin.Log.Debug($"Postfix LoadClothingBySlot, slot: {slot}, idDer: {Idder}, Target object: {TargetObjt.name}, Material index: {materialIndex}, Color: {materialColor}, Smoothness: {materialSmoothness}");
+    [HarmonyPatch(typeof(Material), nameof(Material.SetColor), [typeof(string), typeof(Color)])]
+    static bool MaterialSetColorPrefix(Material __instance, bool __runOriginal, string name, Color value) {
+        if (__instance.name.StartsWith("G3") || __instance.name.StartsWith("M3") || __instance.name.StartsWith("Skin"))
+            Plugin.Log.Debug($"{__instance.name} set {name} = {value}");
+
+        if (!__runOriginal)
+            return false;
+
+        return true;
     }
+
+    [HarmonyPrefix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(Material), nameof(Material.SetTexture), [typeof(string), typeof(Texture)])]
+    static bool MaterialSetTexturePrefix(Material __instance, bool __runOriginal, string name, Texture value) {
+        if (name.StartsWith("_Make"))
+            Plugin.Log.Debug($"{__instance.name} set {name} = {value.name}");
+
+        if (!__runOriginal)
+            return false;
+
+        return true;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(Material), nameof(Material.SetFloat), [typeof(string), typeof(float)])]
+    static bool MaterialSetFloatPrefix(Material __instance, bool __runOriginal, string name, float value) {
+        if (__instance.name.StartsWith("G3") || __instance.name.StartsWith("M3") || __instance.name.StartsWith("Skin"))
+            Plugin.Log.Debug($"{__instance.name} set {name} = {value}");
+
+        if (!__runOriginal)
+            return false;
+
+        return true;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyWrapSafe]
+    [HarmonyPatch(typeof(Material), nameof(Material.SetFloat), [typeof(int), typeof(float)])]
+    static bool MaterialSetFloatPrefix(Material __instance, bool __runOriginal, int nameID, float value) {
+        if (!__instance.name.StartsWith("Hidden") && !__instance.name.StartsWith("Zeit") && !__instance.name.StartsWith("Stencil"))
+            Plugin.Log.Debug($"{__instance.name} set {nameID} = {value}");
+
+        if (!__runOriginal)
+            return false;
+
+        return true;
+    }*/
 #endif
 }

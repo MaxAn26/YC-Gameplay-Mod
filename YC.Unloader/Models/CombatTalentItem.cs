@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 using Il2Cpp;
 
 namespace YC.Unloader.Models;
-internal class CombatTalentItem : IComparable<CombatTalentItem> {
+internal class CombatTalentItem : IComparable<CombatTalentItem>
+{
     public int ID { get; set; }
     public string Name { get; set; }
     public string Description1 { get; set; }
@@ -16,16 +17,15 @@ internal class CombatTalentItem : IComparable<CombatTalentItem> {
 
     public int CompareTo(CombatTalentItem other) => ID.CompareTo(other.ID);
 
-    internal static CombatTalentItem FromCombatTalent(CombatTalent item) {
-        return new CombatTalentItem {
-            ID = item.ID,
-            Name = item.talentName,
-            Description1 = item.talentDescriptionLevel1,
-            Description2 = item.talentDescriptionLevel2,
-            Description3 = item.talentDescriptionLevel3,
-            IsCombatTalent = item.isCombatTalent,
-            BannedTalents = [.. item.bannedTalents],
-            RequiredTalents = [.. item.requiredTalents],
-        };
-    }
+    internal static CombatTalentItem FromCombatTalent(CombatTalent item) => new CombatTalentItem
+    {
+        ID = item.ID,
+        Name = item.talentName,
+        Description1 = item.talentDescriptionLevel1,
+        Description2 = item.talentDescriptionLevel2,
+        Description3 = item.talentDescriptionLevel3,
+        IsCombatTalent = item.isCombatTalent,
+        BannedTalents = [.. item.bannedTalents],
+        RequiredTalents = [.. item.requiredTalents],
+    };
 }

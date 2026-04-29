@@ -1,0 +1,35 @@
+<Project>
+	<Import Project=".\build\PluginInfo.targets" />
+	<PropertyGroup>		
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<LangVersion>latest</LangVersion>
+		<Nullable>disable</Nullable>
+		<DebugType>embedded</DebugType>
+		<Platforms>x64</Platforms>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<MainVersion>1.0</MainVersion>
+		<BuildVersion>$([System.DateTime]::UtcNow.ToString(yy))$([System.DateTime]::UtcNow.DayOfYear.ToString(000))</BuildVersion>
+		<VersionTime>$([System.DateTime]::UtcNow.ToString(HHmm))</VersionTime>
+
+		<Product>$(AssemblyName)</Product>
+		<Authors>BoL4oNoK</Authors>
+		<Copyright>Copyright © $(Authors) $([System.DateTime]::UtcNow.ToString(yyyy))</Copyright>
+		<AssemblyVersion>$(MainVersion).$(BuildVersion).$(VersionTime)</AssemblyVersion>
+		<Version>$(MainVersion).$(BuildVersion)</Version>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+		<GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+		<Deterministic>false</Deterministic>
+	</PropertyGroup>
+	
+	<ItemDefinitionGroup>
+		<PackageReference>
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<Reference>
+			<Private>false</Private>
+		</Reference>
+	</ItemDefinitionGroup>
+</Project>

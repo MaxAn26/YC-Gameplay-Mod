@@ -1,7 +1,8 @@
-﻿using Il2Cpp;
+using Il2Cpp;
 
 namespace YC.Unloader.Models;
-internal class CombatActionItem {
+internal class CombatActionItem
+{
     public string Name { get; set; }
     public string Description { get; set; }
     public int ActionTarget { get; set; }
@@ -41,45 +42,44 @@ internal class CombatActionItem {
     public bool IsEscape { get; set; }
     public bool IsStatus { get; set; }
 
-    internal static CombatActionItem FromCombatTalent(CombatAction item) {
-        return new CombatActionItem {
-            Name            = item.actionName,
-            Description     = item.actionDescription,
-            IsAttack        = item.isAttack,
-            IsSpell         = item.isSpell,
-            IsBasicAction   = item.isBasicAction,
-            IsAbility       = item.isAbility,
-            IsErotic        = item.isErotic,
-            IsDivine        = item.isDivine,
-            IsNature        = item.isNature,
-            IsFlame         = item.isFlame,
-            IsExplosive     = item.isExplosive,
-            IsRubyflame     = item.isRubyflame,
-            IsAcidic        = item.isAcidic,
-            IsWeave         = item.isWeave,
-            IsHex           = item.isHex,
-            IsStorm         = item.isStorm,
-            IsBolt          = item.isBolt,
-            IsArcane        = item.isArcane,
-            IsEnhacement    = item.isEnhacement,
-            IsDragon        = item.isDragon,
-            IsRestraint     = item.isRestraint,
-            IsGrapple       = item.isGrapple,
-            IsWeaponAttack  = item.isWeaponAttack,
-            IsOneHanded     = item.isOneHanded,
-            IsTwoHanded     = item.isTwoHanded,
-            IsUnarmed       = item.isUnarmed,
-            IsKick          = item.isKick,
-            IsWrestling     = item.isWrestling,
-            IsDominate      = item.isDominate,
-            IsCommit        = item.isCommit,
-            IsBuff          = item.isBuff,
-            IsReversal      = item.isReversal,
-            IsStruggle      = item.isStruggle,
-            IsEscape        = item.isEscape,
-            IsStatus        = item.isStatus,
-            ActionTarget    = item.actionTarget,
-            ActionType      = item.actionType,
-        };
-    }
+    internal static CombatActionItem FromCombatTalent(CombatAction item) => new CombatActionItem
+    {
+        Name = item.actionName,
+        Description = item.actionDescription,
+        IsAttack = item.isAttack,
+        IsSpell = item.isSpell,
+        IsBasicAction = item.isBasicAction,
+        IsAbility = item.isAbility,
+        IsErotic = item.isErotic,
+        IsDivine = item.isDivine,
+        IsNature = item.isNature,
+        IsFlame = item.isFlame,
+        IsExplosive = item.isExplosive,
+        IsRubyflame = item.isRubyflame,
+        IsAcidic = item.isAcidic,
+        IsWeave = item.isWeave,
+        IsHex = item.isHex,
+        IsStorm = item.isStorm,
+        IsBolt = item.isBolt,
+        IsArcane = item.isArcane,
+        IsEnhacement = item.isEnhacement,
+        IsDragon = item.isDragon,
+        IsRestraint = item.isRestraint,
+        IsGrapple = item.isGrapple,
+        IsWeaponAttack = item.isWeaponAttack,
+        IsOneHanded = item.isOneHanded,
+        IsTwoHanded = item.isTwoHanded,
+        IsUnarmed = item.isUnarmed,
+        IsKick = item.isKick,
+        IsWrestling = item.isWrestling,
+        IsDominate = item.isDominate,
+        IsCommit = item.isCommit,
+        IsBuff = item.isBuff,
+        IsReversal = item.isReversal,
+        IsStruggle = item.isStruggle,
+        IsEscape = item.isEscape,
+        IsStatus = item.isStatus,
+        ActionTarget = item.actionTarget,
+        ActionType = item.actionType,
+    };
 }

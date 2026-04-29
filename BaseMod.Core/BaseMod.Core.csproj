@@ -1,41 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>disable</Nullable>
-		<RestoreAdditionalProjectSources>
-			https://api.nuget.org/v3/index.json;
-			https://nuget.bepinex.dev/v3/index.json
-		</RestoreAdditionalProjectSources>
-		<DebugType>embedded</DebugType>
-		<Platforms>x64</Platforms>
-	</PropertyGroup>
-
-	<PropertyGroup>
-		<MainVersion>1.0</MainVersion>
-		<BuildVersion>$([System.DateTime]::UtcNow.ToString(yy))$([System.DateTime]::UtcNow.DayOfYear.ToString(000))</BuildVersion>
-		<VersionTime>$([System.DateTime]::UtcNow.ToString(HHmm))</VersionTime>
-	</PropertyGroup>
-	<PropertyGroup>
-		<Product>$(AssemblyName)</Product>
-		<Authors>BoL4oNoK</Authors>
-		<Copyright>Copyright © BoL4oNoK $([System.DateTime]::UtcNow.ToString(yyyy))</Copyright>
-		<AssemblyVersion>$(MainVersion).$(BuildVersion).$(VersionTime)</AssemblyVersion>
-		<Version>$(MainVersion).$(BuildVersion)</Version>
-		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-		<GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-	</PropertyGroup>
-	<ItemDefinitionGroup>
-		<PackageReference>
-			<PrivateAssets>all</PrivateAssets>
-		</PackageReference>
-		<Reference>
-			<Private>false</Private>
-		</Reference>
-	</ItemDefinitionGroup>
 	<ItemGroup>
-		<PackageReference Include="LavaGang.MelonLoader" Version="0.7.2" />
+		<PackageReference Include="LavaGang.MelonLoader" />
 		
 		<Reference Include="Il2CppInterop.Runtime">
 			<HintPath>..\Libs\Il2CppInterop.Runtime.dll</HintPath>

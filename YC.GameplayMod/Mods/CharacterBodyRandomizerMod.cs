@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,7 +15,8 @@ using UnityEngine;
 using YC.GameplayMod.Models;
 
 namespace YC.GameplayMod.Mods;
-public class CharacterBodyRandomizerMod {
+public class CharacterBodyRandomizerMod
+{
     #region Configuration
     internal static MelonPreferences_Entry<bool> Enabled;
     internal static MelonPreferences_Entry<bool> RandomizeCompanions;
@@ -34,87 +35,108 @@ public class CharacterBodyRandomizerMod {
     public static CharacterDataa Character => CharacterDataa.Instance;
     #endregion
 
-    public static void Load(PluginConfig config) {
-        try {
-            Enabled = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(Enabled), false, 
+    public static void Load(PluginConfig config)
+    {
+        try
+        {
+            Enabled = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(Enabled), false,
                 "Activates the modification", new PluginConfig.AcceptableValueList<bool>([true, false]));
-            RandomizeCompanions = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(RandomizeCompanions), false, 
+            RandomizeCompanions = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(RandomizeCompanions), false,
                 "Randomize player companions", new PluginConfig.AcceptableValueList<bool>([true, false]));
-            ChanceForFuta = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(ChanceForFuta), 35, 
+            ChanceForFuta = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(ChanceForFuta), 35,
                 "Chance for female character with active or mixed role become futanari", new PluginConfig.AcceptableValueRange<int>(0, 100));
-            ChanceForFullFuta = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(ChanceForFullFuta), 50, 
+            ChanceForFullFuta = config.Entry(nameof(CharacterBodyRandomizerMod), nameof(ChanceForFullFuta), 50,
                 "Chance for female futa character get full futa (dick + balls)", new PluginConfig.AcceptableValueRange<int>(0, 100));
 
-            if (Enabled.Value) {
-                if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "BodyRestrictions.json", out BodyRestrictions bodyRestrictions)) {
+            if (Enabled.Value)
+            {
+                if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "BodyRestrictions.json", out BodyRestrictions bodyRestrictions))
+                {
                     bodyRestrictions = GetBodyRestrictions();
                     JsonUtils.TrySerialize(Plugin.PluginResources, "BodyRestrictions.json", bodyRestrictions);
                 }
 
                 BodyRestrictions = bodyRestrictions;
 
-                if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "BodyProfileWeights.json", out List<BodyProfile> profiles)) {
+                if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "BodyProfileWeights.json", out List<BodyProfile> profiles))
+                {
                     profiles = GetBodyProfiles();
                     JsonUtils.TrySerialize(Plugin.PluginResources, "BodyProfileWeights.json", profiles);
                 }
 
                 BodyProfiles.AddRange(profiles);
 
-                if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "EnemyEthnicities.json", out List<EnemyEthnicity> ethnicities)) {
+                if (!JsonUtils.TryDeserialize(Plugin.PluginResources, "EnemyEthnicities.json", out List<EnemyEthnicity> ethnicities))
+                {
                     ethnicities = GetEnemyEthnicities();
                     JsonUtils.TrySerialize(Plugin.PluginResources, "EnemyEthnicities.json", ethnicities);
                 }
 
-                foreach (var ethnicity in ethnicities) {
-                    BodyProfiles.ForEach(profile => {
+                foreach (EnemyEthnicity ethnicity in ethnicities)
+                {
+                    BodyProfiles.ForEach(profile =>
+                    {
                         if (ethnicity.BodyWeights.TryGetValue(profile.Name, out int weight))
+                        {
                             ethnicity.BodyProfileWeights.Add(profile, weight);
+                        }
                     });
                 }
 
                 EnemyEthnicities.AddRange(ethnicities);
             }
 
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             Plugin.Log.Error(ex.Message);
         }
     }
 
-    public static void Randomize(CombatEnemyManager combatEnemyManager, CharacterSex characterSex) {
-        try {
+    public static void Randomize(CombatEnemyManager combatEnemyManager, CharacterSex characterSex)
+    {
+        try
+        {
             if (!Enabled.Value)
+            {
                 return;
+            }
 
             if (Character.adultSettingsDATA.EREnabled || characterSex.characterAttributes is null)
+            {
                 return;
+            }
 
             Wardrobe wardrobe = characterSex.wardrobe;
-            var wardrobe2 = combatEnemyManager.wardrobe;
+            Wardrobe2 wardrobe2 = combatEnemyManager.wardrobe;
             if (wardrobe?.enemyData is null || wardrobe2 is null)
+            {
                 return;
+            }
 
-            if (!combatEnemyManager.requiredAllies.Contains( characterSex.characterName ) || RandomizeCompanions.Value) {
-                Material skin   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[0]);
-                Material face   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[1]);
-                Material eyes   = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[2]);
-                Material beard  = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[3]);
+            if (!combatEnemyManager.requiredAllies.Contains(characterSex.characterName) || RandomizeCompanions.Value)
+            {
+                Material skin = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[0]);
+                Material face = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[1]);
+                Material eyes = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[2]);
+                Material beard = UnityEngine.Object.Instantiate(wardrobe.SkinCharacter.sharedMaterials[3]);
 
-                var materials = wardrobe.SkinCharacter.materials;
+                Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> materials = wardrobe.SkinCharacter.materials;
                 materials[0] = skin;
                 materials[1] = face;
                 materials[2] = eyes;
                 materials[3] = beard;
                 wardrobe.SkinCharacter.materials = materials;
 
-                var ethnicity = GetEnemyEthnicity(wardrobe.enemyData.statsDATA.EnemyEthnicity);
-                var profile = GetBodyProfile(ethnicity.BodyProfileWeights);
-                var body = CalculateBody(profile, characterSex.IsMale);
+                EnemyEthnicity ethnicity = GetEnemyEthnicity(wardrobe.enemyData.statsDATA.EnemyEthnicity);
+                BodyProfile profile = GetBodyProfile(ethnicity.BodyProfileWeights);
+                CharacterBody body = CalculateBody(profile, characterSex.IsMale);
 
                 Plugin.Log.Info($"{characterSex.characterName}: Ethnicity: {ethnicity.Name}, Profile: {profile.Name}, {body}");
 
                 #region Character skin
-                Color skinColor = ethnicity.SkinTones.Count > 0 
-                    ? ethnicity.SkinTones.RandomItem().ToUnityColor() 
+                Color skinColor = ethnicity.SkinTones.Count > 0
+                    ? ethnicity.SkinTones.RandomItem().ToUnityColor()
                     : RandomUtils.Item([.. combatEnemyManager.SkinTones]);
 
                 Plugin.Log.Info($"{wardrobe.characterSex.characterName}: skin color: {skinColor}");
@@ -158,42 +180,50 @@ public class CharacterBodyRandomizerMod {
 
                 #region Character face
                 IDictionary<int, float> faceStyle = GetFaceStyle(ethnicity.FaceStyle);
-                foreach (var (index, value) in faceStyle) {
+                foreach ((int index, float value) in faceStyle)
+                {
                     wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
                 }
 
                 IDictionary<int, float> noseStyle = GetNoseStyle(ethnicity.NoseStyle);
-                foreach (var (index, value) in noseStyle) {
+                foreach ((int index, float value) in noseStyle)
+                {
                     wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
                 }
 
                 IDictionary<int, float> browStyle = GetBrowStyle(ethnicity.BrowStyle);
-                foreach (var (index, value) in browStyle) {
+                foreach ((int index, float value) in browStyle)
+                {
                     wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
                 }
 
                 IDictionary<int, float> mouthStyle = GetMouthStyle(ethnicity.MouthStyle);
-                foreach (var (index, value) in mouthStyle) {
+                foreach ((int index, float value) in mouthStyle)
+                {
                     wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
                 }
 
                 IDictionary<int, float> mouthLength = GetMouthLength(ethnicity.MouthLength);
-                foreach (var (index, value) in mouthLength) {
+                foreach ((int index, float value) in mouthLength)
+                {
                     wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
                 }
 
                 IDictionary<int, float> lipsForward = GetLipsForward(ethnicity.LipsForward);
-                foreach (var (index, value) in lipsForward) {
+                foreach ((int index, float value) in lipsForward)
+                {
                     wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
                 }
 
                 IDictionary<int, float> lipsSize = GetLipsSize(ethnicity.LipsSize);
-                foreach (var (index, value) in lipsSize) {
+                foreach ((int index, float value) in lipsSize)
+                {
                     wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
                 }
 
                 IDictionary<int, float> earsStype = GetEarsStyle(ethnicity.EarsStyle);
-                foreach (var (index, value) in earsStype) {
+                foreach ((int index, float value) in earsStype)
+                {
                     wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
                 }
 
@@ -203,14 +233,18 @@ public class CharacterBodyRandomizerMod {
 
                 #region Character eyes
                 IDictionary<int, float> eyesStyle = GetEyesStyle(ethnicity.EyesStyle);
-                foreach (var (index, value) in eyesStyle) {
+                foreach ((int index, float value) in eyesStyle)
+                {
                     wardrobe.SkinCharacter.SetBlendShapeWeight(index, value);
                 }
 
                 Color eyesColor = Color.black;
-                if (ethnicity.EyesColors.Count > 0) {
+                if (ethnicity.EyesColors.Count > 0)
+                {
                     eyesColor = ethnicity.EyesColors.RandomItem().ToUnityColor();
-                } else {
+                }
+                else
+                {
                     int eyesId = RandomUtils.Chance(15)
                         ? RandomUtils.Int32(21, combatEnemyManager.EyeColors.Count - 1)
                         : RandomUtils.Int32(20);
@@ -231,7 +265,8 @@ public class CharacterBodyRandomizerMod {
                 wardrobe.SkinCharacter.materials[1].SetFloat("_SmoothnessDeviate", smoothness);
                 wardrobe.SkinDick.material.SetFloat("_SmoothnessDeviate", smoothness);
 
-                if (!characterSex.IsMale) {
+                if (!characterSex.IsMale)
+                {
                     int ind = Math.Clamp(body.Areola, 0, wardrobe2.MakeupBodyTex.Count - 1);
                     wardrobe.SkinCharacter.materials[0].SetTexture("_MakeUpMask1_RGB", wardrobe2.MakeupBodyTex[ind]); // текстура сосков
 
@@ -241,34 +276,38 @@ public class CharacterBodyRandomizerMod {
                     float areolaS = skinS + RandomUtils.Float(0.1f, 0.5f);
                     float areolaV = skinV - RandomUtils.Float(0.1f, 0.5f);
 
-                    Color areolaColor = Color.HSVToRGB(areolaH, areolaS, areolaV);
+                    var areolaColor = Color.HSVToRGB(areolaH, areolaS, areolaV);
                     areolaColor.a = RandomUtils.Int32(60, 100) / 100f;
                     wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Bchannel_ColorAmountA", areolaColor);
                 }
 
                 Plugin.Log.Debug($"{characterSex.characterName} set body data...");
-                var back = new Vector3 {
+                var back = new Vector3
+                {
                     x = body.Torso,
                     y = body.Torso,
                     z = body.Torso
                 };
                 wardrobe.Back.transform.localScale = back;
 
-                var waist = new Vector3 {
+                var waist = new Vector3
+                {
                     x = body.Hips,
                     y = body.Hips,
                     z = body.Hips
                 };
                 wardrobe.Waist.transform.localScale = waist;
 
-                var belly = new Vector3 {
+                var belly = new Vector3
+                {
                     x = body.Belly,
                     y = body.Belly,
                     z = body.Belly
                 };
                 wardrobe.Belly.transform.localScale = belly;
 
-                var arms = new Vector3 {
+                var arms = new Vector3
+                {
                     x = body.Arms,
                     y = body.Arms,
                     z = body.Arms
@@ -276,7 +315,8 @@ public class CharacterBodyRandomizerMod {
                 wardrobe.LeftArm.transform.localScale = arms;
                 wardrobe.RightArm.transform.localScale = arms;
 
-                var biceps = new Vector3 {
+                var biceps = new Vector3
+                {
                     x = body.Biceps,
                     y = body.Biceps,
                     z = body.Biceps
@@ -284,7 +324,8 @@ public class CharacterBodyRandomizerMod {
                 wardrobe.LeftShoulder.transform.localScale = biceps;
                 wardrobe.RightShoulder.transform.localScale = biceps;
 
-                var thighs = new Vector3 {
+                var thighs = new Vector3
+                {
                     x = body.Thighs,
                     y = body.Thighs,
                     z = body.Thighs
@@ -292,7 +333,8 @@ public class CharacterBodyRandomizerMod {
                 wardrobe.LeftThigh.transform.localScale = thighs;
                 wardrobe.RightThigh.transform.localScale = thighs;
 
-                var calves = new Vector3 {
+                var calves = new Vector3
+                {
                     x = body.Calves,
                     y = body.Calves,
                     z = body.Calves
@@ -300,7 +342,8 @@ public class CharacterBodyRandomizerMod {
                 wardrobe.LeftLeg.transform.localScale = calves;
                 wardrobe.RightLeg.transform.localScale = calves;
 
-                var boobs = new Vector3 {
+                var boobs = new Vector3
+                {
                     x = body.Boobs,
                     y = body.Boobs,
                     z = body.Boobs
@@ -308,7 +351,8 @@ public class CharacterBodyRandomizerMod {
                 wardrobe.LeftBoob.transform.localScale = boobs;
                 wardrobe.RightBoob.transform.localScale = boobs;
 
-                var booty = new Vector3 {
+                var booty = new Vector3
+                {
                     x = body.Booty,
                     y = body.Booty,
                     z = body.Booty
@@ -316,7 +360,8 @@ public class CharacterBodyRandomizerMod {
                 wardrobe.LeftBooty.transform.localScale = booty;
                 wardrobe.RightBooty.transform.localScale = booty;
 
-                var dick = new Vector3 {
+                var dick = new Vector3
+                {
                     x = body.Dick,
                     y = body.Dick,
                     z = body.Dick
@@ -328,7 +373,8 @@ public class CharacterBodyRandomizerMod {
                 #endregion Character body
 
                 #region Character make up
-                if (!characterSex.IsMale) {
+                if (!characterSex.IsMale)
+                {
                     Color.RGBToHSV(skinColor, out float sh, out float ss, out float sv);
                     Color.RGBToHSV(hairColor, out float hh, out float hs, out float hv);
                     Color.RGBToHSV(eyesColor, out float eh, out float es, out float ev);
@@ -336,26 +382,46 @@ public class CharacterBodyRandomizerMod {
                     int skinTone = 2; // neutral tone
                     float score = 0f;
                     if (sh < 0.1f || sh > 0.9f)
+                    {
                         score += 0.5f; // красноватый → warm
+                    }
+
                     if (sh > 0.5f && sh < 0.75f)
+                    {
                         score -= 0.5f; // синеватый → cool
+                    }
 
                     // --- волосы ---
                     if (hv < 0.3f)
+                    {
                         score -= 0.3f; // тёмные → чаще cool
+                    }
+
                     if (hh > 0.05f && hh < 0.15f)
+                    {
                         score += 0.3f; // рыжие/золотые → warm
+                    }
 
                     // --- глаза ---
                     if (eh > 0.5f && eh < 0.7f)
+                    {
                         score -= 0.3f; // синие
+                    }
+
                     if (eh > 0.2f && eh < 0.4f)
+                    {
                         score += 0.2f; // зелёные
+                    }
 
                     if (score > 0.2f)
+                    {
                         skinTone = 3;   // warm tone
+                    }
+
                     if (score < -0.2f)
+                    {
                         skinTone = 1;   // cool tone
+                    }
 
                     float contrast = Mathf.Abs(sv - hv);
                     float intensity = Mathf.Lerp(0.3f, 1.0f, contrast);
@@ -363,21 +429,26 @@ public class CharacterBodyRandomizerMod {
                     // Eyeshadow
                     float h = (eh + 0.5f) % 1f;
                     if (skinTone == 3)
+                    {
                         h += 0.05f;
+                    }
                     else if (skinTone == 1)
+                    {
                         h -= 0.05f;
+                    }
 
                     float s = RandomUtils.Float(0.4f, 0.8f);
                     float v = RandomUtils.Float(0.5f, 0.9f);
-                    Color eyeshadowColor = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s * intensity), Mathf.Clamp01(v));
+                    var eyeshadowColor = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s * intensity), Mathf.Clamp01(v));
 
                     // eye liner
                     s *= 0.5f;
                     v *= 0.3f;
-                    Color eyelinerColor = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s), Mathf.Clamp01(v));
+                    var eyelinerColor = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s), Mathf.Clamp01(v));
 
                     // lipstic
-                    h = skinTone switch {
+                    h = skinTone switch
+                    {
                         3 => Mathf.Lerp(sh, 0.03f, 0.7f),
                         1 => Mathf.Lerp(sh, 0.97f, 0.7f),
                         _ => Mathf.Lerp(sh, 0.0f, 0.5f)
@@ -394,19 +465,23 @@ public class CharacterBodyRandomizerMod {
                     s = Mathf.Clamp01(s);
                     v = Mathf.Clamp01(v);
 
-                    Color lipstic = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s * intensity), Mathf.Clamp01(v));
+                    var lipstic = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s * intensity), Mathf.Clamp01(v));
 
                     // nails
                     h += RandomUtils.Float(-0.05f, 0.05f);
                     h = Mathf.Repeat(h, 1f);
 
                     if (RandomUtils.Chance(0.5))
+                    {
                         v *= 0.7f;
+                    }
 
                     if (RandomUtils.Chance(0.3))
+                    {
                         s *= 1.2f;
+                    }
 
-                    Color nailColor = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s * intensity), Mathf.Clamp01(v));
+                    var nailColor = Color.HSVToRGB(Mathf.Clamp01(h), Mathf.Clamp01(s * intensity), Mathf.Clamp01(v));
 
                     wardrobe.SkinCharacter.sharedMaterials[1].SetTexture("_MakeUpMask1_RGB", wardrobe2.MakeupTex[RandomUtils.Int32(wardrobe2.MakeupTex.Count - 2)]);    // eye liner
                     wardrobe.SkinCharacter.sharedMaterials[1].SetTexture("_MakeUpMask2_RGB", wardrobe2.MakeupTex2[RandomUtils.Int32(wardrobe2.MakeupTex2.Count - 1)]);  // shadow
@@ -423,43 +498,53 @@ public class CharacterBodyRandomizerMod {
             }
 
             #region Character genetals
-            if (characterSex.IsMale) {
+            if (characterSex.IsMale)
+            {
                 wardrobe.SkinCharacter.SetBlendShapeWeight(1, 100f);
-                
+
                 wardrobe.SkinDick.sharedMesh = wardrobe2.DickMesh;
                 Material material = UnityEngine.Object.Instantiate(wardrobe2.DickMatM);
-                var color = wardrobe.SkinCharacter.material.GetColor("_Albedo_Tint");
+                Color color = wardrobe.SkinCharacter.material.GetColor("_Albedo_Tint");
                 wardrobe.SkinDick.sharedMaterial = material;
                 wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", color);
-            } else {
-                if (RandomUtils.Chance(ChanceForFuta.Value)) {
+            }
+            else
+            {
+                if (RandomUtils.Chance(ChanceForFuta.Value))
+                {
                     Plugin.Log.Info($"{characterSex.characterName} will use a dick");
 
                     wardrobe.SkinDick.sharedMesh = RandomUtils.Chance(ChanceForFullFuta.Value) ? wardrobe2.DickMesh : wardrobe2.DickHalfMesh;
                     Material material = UnityEngine.Object.Instantiate(wardrobe2.DickMatF);
-                    var color = wardrobe.SkinCharacter.material.GetColor("_Albedo_Tint");
+                    Color color = wardrobe.SkinCharacter.material.GetColor("_Albedo_Tint");
                     wardrobe.SkinDick.sharedMaterial = material;
                     wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", color);
-                } else {
+                }
+                else
+                {
                     Plugin.Log.Info($"{characterSex.characterName} will use strapon");
 
                     wardrobe.SkinDick.sharedMesh = wardrobe2.StrapMesh;
                     Material material = UnityEngine.Object.Instantiate(wardrobe2.StrapMat);
                     wardrobe.SkinDick.sharedMaterial = material;
-                    var color = wardrobe.enemyData.customizationDATA.TorsoIntColor;
+                    Color color = wardrobe.enemyData.customizationDATA.TorsoIntColor;
                     wardrobe.SkinDick.sharedMaterial.SetColor("_Albedo_Tint", color);
                 }
             }
             #endregion Character genetals
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             Plugin.Log.Error(ex.Message);
         }
     }
 
-    private static IDictionary<int, float> GetFaceStyle(List<int> faces ) {
+    private static IDictionary<int, float> GetFaceStyle(List<int> faces)
+    {
         int id = faces.Count > 0 ? faces.RandomItem() : RandomUtils.Int32(0, 20);
         Dictionary<int, float> values = [];
-        switch (id) {
+        switch (id)
+        {
             case 1:
                 values.Clear();
                 values.Add(2, 35.0f);
@@ -612,10 +697,12 @@ public class CharacterBodyRandomizerMod {
         return values;
     }
 
-    private static IDictionary<int, float> GetEyesStyle(List<int> eyes) {
+    private static IDictionary<int, float> GetEyesStyle(List<int> eyes)
+    {
         int id = eyes.Count > 0 ? eyes.RandomItem() : RandomUtils.Int32(0, 20);
         Dictionary<int, float> values = [];
-        switch (id) {
+        switch (id)
+        {
             case 1:
                 values.Add(6, 35.0f);
                 values.Add(7, 0.0f);
@@ -747,10 +834,12 @@ public class CharacterBodyRandomizerMod {
         return values;
     }
 
-    private static IDictionary<int, float> GetNoseStyle(List<int> noses) {
+    private static IDictionary<int, float> GetNoseStyle(List<int> noses)
+    {
         int id = noses.Count > 0 ? noses.RandomItem() : RandomUtils.Int32(0, 12);
         Dictionary<int, float> values = [];
-        switch (id) {
+        switch (id)
+        {
             case 1:
                 values.Add(11, 35.0f);
                 values.Add(12, 0.0f);
@@ -833,10 +922,12 @@ public class CharacterBodyRandomizerMod {
         return values;
     }
 
-    private static IDictionary<int, float> GetBrowStyle(List<int> brows) {
+    private static IDictionary<int, float> GetBrowStyle(List<int> brows)
+    {
         int id = brows.Count > 0 ? brows.RandomItem() : RandomUtils.Int32(0, 8);
         Dictionary<int, float> values = [];
-        switch (id) {
+        switch (id)
+        {
             case 1:
                 values.Add(24, 50.0f);
                 values.Add(25, 0.0f);
@@ -895,10 +986,12 @@ public class CharacterBodyRandomizerMod {
         return values;
     }
 
-    private static IDictionary<int, float> GetMouthStyle(List<int> mouth ) {
+    private static IDictionary<int, float> GetMouthStyle(List<int> mouth)
+    {
         int id = mouth.Count > 0 ? mouth.RandomItem() : RandomUtils.Int32(0, 20);
         Dictionary<int, float> values = [];
-        switch (id) {
+        switch (id)
+        {
             case 1:
                 values.Add(16, 35.0f);
                 values.Add(17, 0.0f);
@@ -1029,10 +1122,12 @@ public class CharacterBodyRandomizerMod {
         return values;
     }
 
-    private static IDictionary<int, float> GetMouthLength(List<int> mouth) {
+    private static IDictionary<int, float> GetMouthLength(List<int> mouth)
+    {
         int id = mouth.Count > 0 ? mouth.RandomItem() : RandomUtils.Int32(0, 10);
         Dictionary<int, float> values = [];
-        switch (id) {
+        switch (id)
+        {
             case 1:
                 values.Add(20, 0.0f);
                 values.Add(21, 20.0f);
@@ -1081,10 +1176,12 @@ public class CharacterBodyRandomizerMod {
         return values;
     }
 
-    private static IDictionary<int, float> GetLipsForward(List<int> lips ) {
+    private static IDictionary<int, float> GetLipsForward(List<int> lips)
+    {
         int id = lips.Count > 0 ? lips.RandomItem() : RandomUtils.Int32(0, 10);
         Dictionary<int, float> values = [];
-        switch (id) {
+        switch (id)
+        {
             case 1:
                 values.Add(35, 10.0f);
                 break;
@@ -1122,10 +1219,12 @@ public class CharacterBodyRandomizerMod {
         return values;
     }
 
-    private static IDictionary<int, float> GetLipsSize(List<int> lips) {
+    private static IDictionary<int, float> GetLipsSize(List<int> lips)
+    {
         int id = lips.Count > 0 ? lips.RandomItem() : RandomUtils.Int32(0, 8);
         Dictionary<int, float> values = [];
-        switch (id) {
+        switch (id)
+        {
             case 1:
                 values.Add(22, 12.0f);
                 values.Add(23, 12.0f);
@@ -1166,10 +1265,12 @@ public class CharacterBodyRandomizerMod {
         return values;
     }
 
-    private static IDictionary<int, float> GetEarsStyle( List<int> ears ) {
+    private static IDictionary<int, float> GetEarsStyle(List<int> ears)
+    {
         int id = ears.Count > 0 ? ears.RandomItem() : RandomUtils.Int32(0, 20);
         Dictionary<int, float> values = [];
-        switch (id) {
+        switch (id)
+        {
             case 1:
                 values.Add(28, 20.0f);
                 values.Add(29, 0.0f);
@@ -1218,149 +1319,168 @@ public class CharacterBodyRandomizerMod {
         return values;
     }
 
-    public static void SetFutaState(CharacterSex characterSex) {
+    public static void SetFutaState(CharacterSex characterSex)
+    {
         if (!Enabled.Value)
+        {
             return;
+        }
 
         if (Character.adultSettingsDATA.EREnabled)
+        {
             return;
+        }
 
         if (characterSex.IsMale)
+        {
             return;
+        }
 
-        var wardrobe2 = GameObject.Find("WardrobeOBJ")?.GetComponentWithCast<Wardrobe2>();
+        Wardrobe2 wardrobe2 = GameObject.Find("WardrobeOBJ")?.GetComponentWithCast<Wardrobe2>();
         if (wardrobe2 is null)
+        {
             return;
+        }
 
         Plugin.Log.Debug($"{characterSex.characterName}: SetFutaState: {(characterSex.wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh ? "YES" : "No")}");
 
-        if (characterSex.wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh)
-            characterSex.IsFuta = true;
-        else
-            characterSex.IsFuta = false;
+        characterSex.IsFuta = characterSex.wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh;
     }
 
-    public static void CheckHat(ref Wardrobe wardrobe) {
-        if (wardrobe.enemyData.customizationDATA.WearingHat) {
+    public static void CheckHat(ref Wardrobe wardrobe)
+    {
+        if (wardrobe.enemyData.customizationDATA.WearingHat)
+        {
             Plugin.Log.Info("Hat");
             wardrobe.SetHairEnCreator(true);
             return;
         }
     }
 
-    private static CharacterBody CalculateBody( BodyProfile bodyProfile, bool isMale ) {
+    private static CharacterBody CalculateBody(BodyProfile bodyProfile, bool isMale)
+    {
         float extraBoobs = 0.0f;
-        if (!isMale && RandomUtils.Chance(25)) {
+        if (!isMale && RandomUtils.Chance(25))
+        {
             Plugin.Log.Info("Extra boobs");
             extraBoobs += 0.25f;
         }
 
         float extraBooty = 0f;
-        if (!isMale && RandomUtils.Chance(25)) {
+        if (!isMale && RandomUtils.Chance(25))
+        {
             Plugin.Log.Info("Extra booty");
             extraBooty += 0.25f;
         }
 
-        CharacterBody cb = new() {
-            Areola  = Math.Clamp(bodyProfile.Areola.GetSize(), BodyRestrictions.Areola.Min, BodyRestrictions.Areola.Max),
-            Arms    = Math.Clamp(bodyProfile.Arms.GetSize(), BodyRestrictions.Arms.Min, BodyRestrictions.Arms.Max ),
-            Belly   = Math.Clamp(bodyProfile.Belly.GetSize(), BodyRestrictions.Belly.Min, BodyRestrictions.Belly.Max ),
-            Biceps  = Math.Clamp(bodyProfile.Biceps.GetSize(), BodyRestrictions.Biceps.Min, BodyRestrictions.Biceps.Max ),
-            Boobs   = Math.Clamp(bodyProfile.Boobs.GetSize(extraBoobs), BodyRestrictions.Boobs.Min, BodyRestrictions.Boobs.Max),
-            Booty   = Math.Clamp(bodyProfile.Booty.GetSize(extraBooty), BodyRestrictions.Booty.Min, BodyRestrictions.Booty.Max ),
-            Calves  = Math.Clamp(bodyProfile.Calves.GetSize(), BodyRestrictions.Calves.Min, BodyRestrictions.Calves.Max ),
-            Dick    = Math.Clamp(bodyProfile.Dick.GetSize(), BodyRestrictions.Dick.Min, BodyRestrictions.Dick.Max ),
-            Hips    = Math.Clamp(bodyProfile.Hips.GetSize(), BodyRestrictions.Hips.Min, BodyRestrictions.Hips.Max ),
-            Muscle  = Math.Clamp(bodyProfile.Muscle.GetSize(), BodyRestrictions.Muscle.Min, BodyRestrictions.Muscle.Max),
-            Thighs  = Math.Clamp(bodyProfile.Thighs.GetSize(), BodyRestrictions.Thighs.Min, BodyRestrictions.Thighs.Max ),
-            Torso   = Math.Clamp(bodyProfile.Torso.GetSize(), BodyRestrictions.Torso.Min, BodyRestrictions.Torso.Max ),
+        CharacterBody cb = new()
+        {
+            Areola = Math.Clamp(bodyProfile.Areola.GetSize(), BodyRestrictions.Areola.Min, BodyRestrictions.Areola.Max),
+            Arms = Math.Clamp(bodyProfile.Arms.GetSize(), BodyRestrictions.Arms.Min, BodyRestrictions.Arms.Max),
+            Belly = Math.Clamp(bodyProfile.Belly.GetSize(), BodyRestrictions.Belly.Min, BodyRestrictions.Belly.Max),
+            Biceps = Math.Clamp(bodyProfile.Biceps.GetSize(), BodyRestrictions.Biceps.Min, BodyRestrictions.Biceps.Max),
+            Boobs = Math.Clamp(bodyProfile.Boobs.GetSize(extraBoobs), BodyRestrictions.Boobs.Min, BodyRestrictions.Boobs.Max),
+            Booty = Math.Clamp(bodyProfile.Booty.GetSize(extraBooty), BodyRestrictions.Booty.Min, BodyRestrictions.Booty.Max),
+            Calves = Math.Clamp(bodyProfile.Calves.GetSize(), BodyRestrictions.Calves.Min, BodyRestrictions.Calves.Max),
+            Dick = Math.Clamp(bodyProfile.Dick.GetSize(), BodyRestrictions.Dick.Min, BodyRestrictions.Dick.Max),
+            Hips = Math.Clamp(bodyProfile.Hips.GetSize(), BodyRestrictions.Hips.Min, BodyRestrictions.Hips.Max),
+            Muscle = Math.Clamp(bodyProfile.Muscle.GetSize(), BodyRestrictions.Muscle.Min, BodyRestrictions.Muscle.Max),
+            Thighs = Math.Clamp(bodyProfile.Thighs.GetSize(), BodyRestrictions.Thighs.Min, BodyRestrictions.Thighs.Max),
+            Torso = Math.Clamp(bodyProfile.Torso.GetSize(), BodyRestrictions.Torso.Min, BodyRestrictions.Torso.Max),
         };
 
         float fat = Normalize(cb.Belly, 0.3f, 4.0f);
         float muscle = Normalize(cb.Muscle, 0.0f, 2.5f);
 
         // --- 1. Жир распределяется по телу ---
-        cb.Arms     += fat * 0.3f;
-        cb.Booty    += fat * 0.3f;
-        cb.Calves   += fat * 0.3f;
-        cb.Hips     += fat * 0.4f;
-        cb.Thighs   += fat * 0.5f;
+        cb.Arms += fat * 0.3f;
+        cb.Booty += fat * 0.3f;
+        cb.Calves += fat * 0.3f;
+        cb.Hips += fat * 0.4f;
+        cb.Thighs += fat * 0.5f;
 
         // --- 2. Мышцы влияют на тело ---
-        cb.Arms     += muscle * 0.6f;
-        cb.Biceps   += muscle * 1.2f;
-        cb.Calves   += muscle * 0.5f;
-        cb.Thighs   += muscle * 0.6f;
-        cb.Torso    += muscle * 0.7f;
+        cb.Arms += muscle * 0.6f;
+        cb.Biceps += muscle * 1.2f;
+        cb.Calves += muscle * 0.5f;
+        cb.Thighs += muscle * 0.6f;
+        cb.Torso += muscle * 0.7f;
 
         // --- 3. Баланс верх/низ ---
         float lower = (cb.Thighs + cb.Calves) * 0.5f;
         float upper = (cb.Arms + cb.Biceps) * 0.5f;
-        float diff  = upper - lower;
+        float diff = upper - lower;
 
-        cb.Thighs   -= diff * 0.3f;
-        cb.Calves   -= diff * 0.2f;
+        cb.Thighs -= diff * 0.3f;
+        cb.Calves -= diff * 0.2f;
 
         // --- 4. Связка бедра/ягодицы ---
-        cb.Booty    += (cb.Hips - 1.0f) * 0.5f;
-        cb.Thighs   += (cb.Hips - 1.0f) * 0.4f;
+        cb.Booty += (cb.Hips - 1.0f) * 0.5f;
+        cb.Thighs += (cb.Hips - 1.0f) * 0.4f;
 
         // --- 5. Торс ↔ живот ---
-        cb.Torso    += (cb.Belly - 1.0f) * 0.3f;
+        cb.Torso += (cb.Belly - 1.0f) * 0.3f;
 
         // --- 6. Грудь ↔ жир ---
-        cb.Boobs    += fat * 0.4f;
+        cb.Boobs += fat * 0.4f;
 
         // --- 7. Ареолы ↔ грудь ---
         float areolaSize = cb.Areola;
-        areolaSize  += (cb.Boobs - 1.0f) * 2.0f;
-        areolaSize  = Mathf.Clamp(areolaSize, 0.0f, 7.0f);
-        cb.Areola   = Mathf.RoundToInt(areolaSize);
+        areolaSize += (cb.Boobs - 1.0f) * 2.0f;
+        areolaSize = Mathf.Clamp(areolaSize, 0.0f, 7.0f);
+        cb.Areola = Mathf.RoundToInt(areolaSize);
 
         // --- 8. Лёгкая корреляция размера тела ---
-        cb.Dick     += (cb.Torso - 1.0f) * 0.05f;
+        cb.Dick += (cb.Torso - 1.0f) * 0.05f;
 
         // --- 9. Общая масса тела ---
-        float mass  = (cb.Belly + cb.Thighs + cb.Hips) / 3.0f;
-        float scale = (mass - 1.0f);
+        float mass = (cb.Belly + cb.Thighs + cb.Hips) / 3.0f;
+        float scale = mass - 1.0f;
 
-        cb.Arms     += scale * 0.2f;
-        cb.Calves   += scale * 0.2f;
-        cb.Torso    += scale * 0.3f;
+        cb.Arms += scale * 0.2f;
+        cb.Calves += scale * 0.2f;
+        cb.Torso += scale * 0.3f;
 
         // --- 10. Анти-экстрим ---
         if (cb.Belly > 3.0f)
+        {
             cb.Muscle *= 0.8f;
+        }
 
         if (cb.Muscle > 2.0f)
+        {
             cb.Belly *= 0.85f;
+        }
 
-        cb.Areola   = Mathf.Clamp(cb.Areola, BodyRestrictions.Areola.Min, BodyRestrictions.Areola.Max);
-        cb.Arms     = Math.Clamp(cb.Arms, BodyRestrictions.Arms.Min, BodyRestrictions.Arms.Max);
-        cb.Belly    = Math.Clamp(cb.Belly, BodyRestrictions.Belly.Min, BodyRestrictions.Belly.Max );
-        cb.Biceps   = Math.Clamp(cb.Biceps, BodyRestrictions.Biceps.Min, BodyRestrictions.Biceps.Max );
-        cb.Boobs    = Math.Clamp(cb.Boobs, BodyRestrictions.Boobs.Min, BodyRestrictions.Boobs.Max );
-        cb.Booty    = Math.Clamp(cb.Booty, BodyRestrictions.Booty.Min, BodyRestrictions.Booty.Max );
-        cb.Calves   = Math.Clamp(cb.Calves, BodyRestrictions.Calves.Min, BodyRestrictions.Calves.Max );
-        cb.Dick     = Math.Clamp(cb.Dick, BodyRestrictions.Dick.Min, BodyRestrictions.Dick.Max );
-        cb.Hips     = Math.Clamp(cb.Hips, BodyRestrictions.Hips.Min, BodyRestrictions.Hips.Max );
-        cb.Muscle   = Math.Clamp(cb.Muscle, BodyRestrictions.Muscle.Min, BodyRestrictions.Muscle.Max );
-        cb.Thighs   = Math.Clamp(cb.Thighs, BodyRestrictions.Thighs.Min, BodyRestrictions.Thighs.Max );
-        cb.Torso    = Math.Clamp(cb.Torso, BodyRestrictions.Torso.Min, BodyRestrictions.Torso.Max );
+        cb.Areola = Mathf.Clamp(cb.Areola, BodyRestrictions.Areola.Min, BodyRestrictions.Areola.Max);
+        cb.Arms = Math.Clamp(cb.Arms, BodyRestrictions.Arms.Min, BodyRestrictions.Arms.Max);
+        cb.Belly = Math.Clamp(cb.Belly, BodyRestrictions.Belly.Min, BodyRestrictions.Belly.Max);
+        cb.Biceps = Math.Clamp(cb.Biceps, BodyRestrictions.Biceps.Min, BodyRestrictions.Biceps.Max);
+        cb.Boobs = Math.Clamp(cb.Boobs, BodyRestrictions.Boobs.Min, BodyRestrictions.Boobs.Max);
+        cb.Booty = Math.Clamp(cb.Booty, BodyRestrictions.Booty.Min, BodyRestrictions.Booty.Max);
+        cb.Calves = Math.Clamp(cb.Calves, BodyRestrictions.Calves.Min, BodyRestrictions.Calves.Max);
+        cb.Dick = Math.Clamp(cb.Dick, BodyRestrictions.Dick.Min, BodyRestrictions.Dick.Max);
+        cb.Hips = Math.Clamp(cb.Hips, BodyRestrictions.Hips.Min, BodyRestrictions.Hips.Max);
+        cb.Muscle = Math.Clamp(cb.Muscle, BodyRestrictions.Muscle.Min, BodyRestrictions.Muscle.Max);
+        cb.Thighs = Math.Clamp(cb.Thighs, BodyRestrictions.Thighs.Min, BodyRestrictions.Thighs.Max);
+        cb.Torso = Math.Clamp(cb.Torso, BodyRestrictions.Torso.Min, BodyRestrictions.Torso.Max);
 
         return cb;
 
         static float Normalize(float value, float min, float max) => (value - min) / (max - min);
     }
 
-    private static float GetSkewedValue(float max) {
+    private static float GetSkewedValue(float max)
+    {
         float u = RandomUtils.Float(0.0f, 1.0f);       // [0, 1]
         float skewed = u * u;                          // смещает значения к 0
         return skewed * max;
     }
 
-    private static BodyRestrictions GetBodyRestrictions() {
-        var restrictions = new BodyRestrictions {
+    private static BodyRestrictions GetBodyRestrictions()
+    {
+        var restrictions = new BodyRestrictions
+        {
             Areola = new BodyRestrictions.ValueRestrictions<int> { Min = 0, Max = 7 },
             Arms = new BodyRestrictions.ValueRestrictions<float> { Min = 0.3f, Max = 5.0f },
             Belly = new BodyRestrictions.ValueRestrictions<float> { Min = 0.3f, Max = 4.0f },
@@ -1378,7 +1498,8 @@ public class CharacterBodyRandomizerMod {
         return restrictions;
     }
 
-    private static List<BodyProfile> GetBodyProfiles() { 
+    private static List<BodyProfile> GetBodyProfiles()
+    {
         var list = new List<BodyProfile> {
             new() {
                 Id      = 1,
@@ -1463,16 +1584,19 @@ public class CharacterBodyRandomizerMod {
         };
         return list;
     }
-    
-    private static List<EnemyEthnicity> GetEnemyEthnicities() {
+
+    private static List<EnemyEthnicity> GetEnemyEthnicities()
+    {
         List<EnemyEthnicity> list = [];
 
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 0,
             Name = "Any human",
             RandomEthnicity = [1, 2, 3, 4]
         });
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 1,
             Name = "White human",
 
@@ -1530,7 +1654,8 @@ public class CharacterBodyRandomizerMod {
             LipsSize = [],
             EarsStyle = [0],
         });
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 2,
             Name = "Latin human",
 
@@ -1594,7 +1719,8 @@ public class CharacterBodyRandomizerMod {
             LipsSize = [],
             EarsStyle = [0],
         });
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 3,
             Name = "Black human",
 
@@ -1646,7 +1772,8 @@ public class CharacterBodyRandomizerMod {
             LipsSize = [],
             EarsStyle = [0],
         });
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 4,
             Name = "Asian human",
 
@@ -1674,12 +1801,14 @@ public class CharacterBodyRandomizerMod {
             EarsStyle = [0],
         });
 
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 5,
             Name = "Any elf",
             RandomEthnicity = [6, 7, 8, 9]
         });
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 6,
             Name = "High elf",
 
@@ -1735,9 +1864,10 @@ public class CharacterBodyRandomizerMod {
             MouthLength = [],
             LipsForward = [],
             LipsSize = [],
-            EarsStyle = [2,3,4,5],
+            EarsStyle = [2, 3, 4, 5],
         });
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 7,
             Name = "Latin elf",
 
@@ -1799,9 +1929,10 @@ public class CharacterBodyRandomizerMod {
             MouthLength = [],
             LipsForward = [],
             LipsSize = [],
-            EarsStyle = [2,3,4,5],
+            EarsStyle = [2, 3, 4, 5],
         });
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 8,
             Name = "Drow elf",
 
@@ -1851,9 +1982,10 @@ public class CharacterBodyRandomizerMod {
             MouthLength = [],
             LipsForward = [],
             LipsSize = [],
-            EarsStyle = [2,3,4,5],
+            EarsStyle = [2, 3, 4, 5],
         });
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 9,
             Name = "Red elf",
 
@@ -1903,10 +2035,11 @@ public class CharacterBodyRandomizerMod {
             MouthLength = [],
             LipsForward = [],
             LipsSize = [],
-            EarsStyle = [2,3,4,5],
+            EarsStyle = [2, 3, 4, 5],
         });
 
-        list.Add(new EnemyEthnicity {
+        list.Add(new EnemyEthnicity
+        {
             Id = 10,
             Name = "Random",
             RandomEthnicity = [1, 2, 3, 4, 6, 7, 8, 9]
@@ -1915,31 +2048,40 @@ public class CharacterBodyRandomizerMod {
         return list;
     }
 
-    private static EnemyEthnicity GetEnemyEthnicity( int id ) {
-        EnemyEthnicity enemyEthnicity = EnemyEthnicities.Find( x => x.Id == id );
-        enemyEthnicity ??= RandomUtils.Item( EnemyEthnicities.Where(x => !x.IsRandomEthnicity) );
+    private static EnemyEthnicity GetEnemyEthnicity(int id)
+    {
+        EnemyEthnicity enemyEthnicity = EnemyEthnicities.Find(x => x.Id == id);
+        enemyEthnicity ??= RandomUtils.Item(EnemyEthnicities.Where(x => !x.IsRandomEthnicity));
 
         if (enemyEthnicity.IsRandomEthnicity)
+        {
             enemyEthnicity = RandomUtils.Item(EnemyEthnicities.Where(x => enemyEthnicity.RandomEthnicity.Contains(x.Id)));
+        }
 
         return enemyEthnicity;
     }
 
-    public static BodyProfile GetBodyProfile(Dictionary<BodyProfile, int> weights) {
+    public static BodyProfile GetBodyProfile(Dictionary<BodyProfile, int> weights)
+    {
         int total = 0;
 
-        foreach (var w in weights.Values)
+        foreach (int w in weights.Values)
+        {
             total += w;
+        }
 
         int roll = RandomUtils.Int32(total);
 
         int current = 0;
 
-        foreach (var pair in weights) {
+        foreach (KeyValuePair<BodyProfile, int> pair in weights)
+        {
             current += pair.Value;
 
             if (roll <= current)
+            {
                 return pair.Key;
+            }
         }
 
         // fallback (на всякий случай)

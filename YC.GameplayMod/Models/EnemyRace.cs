@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace YC.GameplayMod.Models;
-public class EnemyRace {
+public class EnemyRace
+{
     public string Name { get; set; }
 
     public List<string> SkinColors { get; set; } = [];
