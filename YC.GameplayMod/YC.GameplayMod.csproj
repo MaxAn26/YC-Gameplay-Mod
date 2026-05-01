@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPluginLib>true</IsPluginLib>
-		<RootNamespace>YC.GameplayMod</RootNamespace>
-		<AssemblyName>YC.GameplayMod</AssemblyName>
-		<Title>Yaradiels Crown. Gameplay Mod</Title>
-		<Description>MelonLoader mod for extend gameplay in Yaradiels Crown</Description>		
+		
+        <ModGUID>BoL4oNoK.YC.GameplayMod</ModGUID>
+        <ModName>Yaradiels Crown. Gameplay Mod</ModName>
+        <ModDescription>MelonLoader mod for extend gameplay in Yaradiels Crown</ModDescription>		
 	</PropertyGroup>
 
 	<ItemGroup>

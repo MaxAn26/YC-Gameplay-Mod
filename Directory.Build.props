@@ -14,8 +14,6 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <IsPluginLib Condition="'$(IsPluginLib)' == ''">false</IsPluginLib>
-        
         <MainVersion>1.0</MainVersion>
         <BuildVersion>$([System.DateTime]::UtcNow.ToString(yy))$([System.DateTime]::UtcNow.DayOfYear.ToString(000))</BuildVersion>
         <VersionTime>$([System.DateTime]::UtcNow.ToString(HHmm))</VersionTime>
@@ -24,10 +22,19 @@
         <Deterministic>false</Deterministic>
         <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
         <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-        
-        <Authors>BoL4oNoK</Authors>
-        <Copyright>Copyright © $(Authors) $([System.DateTime]::UtcNow.ToString(yyyy))</Copyright>
-        <GitRepoUrl>https://github.com/MaxAn26/YC-Gameplay-Mod</GitRepoUrl>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <IsPluginLib Condition="'$(IsPluginLib)' == ''">false</IsPluginLib>
+
+        <GameDeveloper>Skyflare Studios</GameDeveloper>
+        <GameName>Yaradiels Crown</GameName>
+
+        <ModGUID />
+        <ModDeveloper>BoL4oNoK</ModDeveloper>
+        <ModDescription />
+        <ModName />
+        <ModUrl>https://github.com/MaxAn26/YC-Gameplay-Mod</ModUrl>
     </PropertyGroup>
     
     <ItemDefinitionGroup>

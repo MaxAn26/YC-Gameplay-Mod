@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPluginLib>true</IsPluginLib>
-		<RootNamespace>YC.GameTrainerMod</RootNamespace>
-		<AssemblyName>YC.GameTrainerMod</AssemblyName>
-		<Title>Yaradiels Crown. Trainer</Title>
-		<Description>MelonLoader trainer mode for Yaradiels Crown</Description>
+
+        <ModGUID>YC.GameTrainerMod</ModGUID>
+		<ModName>Yaradiels Crown. Trainer</ModName>
+		<ModDescription>MelonLoader trainer mode for Yaradiels Crown</ModDescription>
 	</PropertyGroup>
 
 	<ItemGroup>

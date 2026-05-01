@@ -1,9 +1,14 @@
 <Project>
     <PropertyGroup>
-        <Product Condition="'$(Title)' != ''">$(Title)</Product>
-        <ProductName Condition="'$(Title)' != ''">$(Title)</ProductName>
+        <Product Condition="'$(ModName)' != ''">$(ModName)</Product>
+        <ProductName Condition="'$(ModName)' != ''">$(ModName)</ProductName>
+
+        <AssemblyName Condition="'$(ModAssembly)' != ''">$(ModAssembly)</AssemblyName>
+        <Authors Condition="'$(ModDeveloper)' != ''">$(ModDeveloper)</Authors>
+        <AssemblyTitle Condition="'$(ModName)' != ''">$(ModName)</AssemblyTitle>
+        <Copyright>Copyright © $(Authors) $([System.DateTime]::UtcNow.ToString(yyyy))</Copyright>
     </PropertyGroup>
-    <Import Condition="'$(IsPluginLib)' == 'true'" Project="PluginInfo.targets" />
+    <Import Condition="'$(IsPluginLib)' == 'true'" Project="ModInfo.targets" />
 
     <Target Name="CopyModsAfterBuild" AfterTargets="PostBuildEvent" Condition="'$(IsPluginLib)' == 'true'" >
         <Message Importance="high" Text="=====> Execute PostBuild Target: CopyModsAfterBuild for $(AssemblyName) =====" />

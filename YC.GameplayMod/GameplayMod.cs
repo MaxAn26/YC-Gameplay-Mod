@@ -5,8 +5,8 @@ using YC.GameplayMod;
 using YC.GameplayMod.Mods;
 using YC.GameplayMod.Patches;
 
-[assembly: MelonInfo(typeof(GameplayMod), ModInfo.NAME, ModInfo.VERSION, ModInfo.AUTHORS, ModInfo.URL)]
-[assembly: MelonGame("Skyflare Studios", "Yaradiels Crown")]
+[assembly: MelonInfo(typeof(GameplayMod), ModInfo.MOD_NAME, ModInfo.MOD_VERSION, ModInfo.MOD_DEVELOPER, ModInfo.MOD_URL)]
+[assembly: MelonGame(ModInfo.GAME_DEVELOPER, ModInfo.GAME_NAME)]
 
 namespace YC.GameplayMod;
 public class GameplayMod : MelonMod
@@ -25,11 +25,11 @@ public class GameplayMod : MelonMod
         // GameplayMod startup logic
         Log = LoggerInstance;
         ConfigPath = MelonEnvironment.UserDataDirectory;
-        PluginAssets = Path.Combine(ConfigPath, ModInfo.GUID, "Assets");
-        PluginConfigs = Path.Combine(ConfigPath, ModInfo.GUID, "Configs");
-        PluginResources = Path.Combine(ConfigPath, ModInfo.GUID, "Resources");
+        PluginAssets = Path.Combine(ConfigPath, ModInfo.MOD_GUID, "Assets");
+        PluginConfigs = Path.Combine(ConfigPath, ModInfo.MOD_GUID, "Configs");
+        PluginResources = Path.Combine(ConfigPath, ModInfo.MOD_GUID, "Resources");
 
-        PluginConfig = new($"{ModInfo.GUID}.cfg");
+        PluginConfig = new($"{ModInfo.MOD_GUID}.cfg");
 
         DickStraponVisibilityMod.Load(PluginConfig);
         CharacterBodyRandomizerMod.Load(PluginConfig);
@@ -48,7 +48,7 @@ public class GameplayMod : MelonMod
         HarmonyInstance.PatchAll(typeof(DebugPatch));
 #endif
 
-        Log.Msg($"Mod {ModInfo.GUID} is loaded!");
+        Log.Msg($"Mod {ModInfo.MOD_GUID} is loaded!");
     }
 
     public override void OnSceneWasLoaded(int buildIndex, string sceneName)

@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPluginLib>true</IsPluginLib>
-		<RootNamespace>YC.Unloader</RootNamespace>
-		<AssemblyName>YC.Unloader</AssemblyName>
-		<Title>Yaradiels Crown. Unloader</Title>
-		<Description>MelonLoader unloader mode for Yaradiels Crown</Description>
+
+        <ModGUID>YC.Unloader</ModGUID>
+		<ModName>Yaradiels Crown. Unloader</ModName>
+		<ModDescription>MelonLoader unloader mode for Yaradiels Crown</ModDescription>
 	</PropertyGroup>
 
 	<ItemGroup>

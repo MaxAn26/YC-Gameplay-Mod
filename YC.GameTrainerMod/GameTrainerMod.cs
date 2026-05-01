@@ -8,8 +8,8 @@ using UnityEngine.SceneManagement;
 using YC.GameTrainerMod;
 using YC.GameTrainerMod.Patches;
 
-[assembly: MelonInfo(typeof(GameTrainerMod), ModInfo.NAME, ModInfo.VERSION, ModInfo.AUTHORS, ModInfo.URL)]
-[assembly: MelonGame("Skyflare Studios", "Yaradiels Crown")]
+[assembly: MelonInfo(typeof(GameTrainerMod), ModInfo.MOD_NAME, ModInfo.MOD_VERSION, ModInfo.MOD_DEVELOPER, ModInfo.MOD_URL)]
+[assembly: MelonGame(ModInfo.GAME_DEVELOPER, ModInfo.GAME_NAME)]
 
 namespace YC.GameTrainerMod;
 public class GameTrainerMod : MelonMod
@@ -27,7 +27,7 @@ public class GameTrainerMod : MelonMod
         MelonEvents.OnUpdate.Subscribe(TrainerOnUpdate, 100);
         MelonEvents.OnGUI.Subscribe(TrainerOnGUI, 100);
 
-        Log.Msg($"Mod {ModInfo.GUID} is loaded!");
+        Log.Msg($"Mod {ModInfo.MOD_GUID} is loaded!");
     }
 
     private void WriteConsole(string message)
