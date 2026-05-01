@@ -1,9 +1,5 @@
-using System;
-
 using BaseMod.Core;
-
 using Il2Cpp;
-
 using MelonLoader;
 
 namespace YC.GameplayMod.Mods;
@@ -27,7 +23,7 @@ internal class DickStraponVisibilityMod
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex.Message);
+            GameplayMod.Log.Error(ex.Message);
         }
     }
 
@@ -73,7 +69,7 @@ internal class DickStraponVisibilityMod
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex.Message);
+            GameplayMod.Log.Error(ex.Message);
             return false;
         }
     }
@@ -112,7 +108,7 @@ internal class DickStraponVisibilityMod
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex.Message);
+            GameplayMod.Log.Error(ex.Message);
         }
     }
 }

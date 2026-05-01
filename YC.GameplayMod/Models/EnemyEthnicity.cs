@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace YC.GameplayMod.Models;
@@ -46,8 +45,8 @@ public class EnemyEthnicity
         [JsonPropertyName("a")]
         public float A { get; set; }
 
-        public static Color FromUnityColor(UnityEngine.Color color) => new Color { R = color.r, G = color.g, B = color.b, A = color.a };
+        public static Color FromUnityColor(UnityEngine.Color color) => new() { R = color.r, G = color.g, B = color.b, A = color.a };
 
-        public UnityEngine.Color ToUnityColor() => new UnityEngine.Color { r = R, g = G, b = B, a = A };
+        public UnityEngine.Color ToUnityColor() => new() { r = R, g = G, b = B, a = A };
     }
 }

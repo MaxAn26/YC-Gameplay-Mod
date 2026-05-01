@@ -1,22 +1,17 @@
-using System.IO;
-
 using BaseMod.Core;
-using BaseMod.Core.Logger;
-
 using MelonLoader;
 using MelonLoader.Utils;
-
 using YC.GameplayMod;
 using YC.GameplayMod.Mods;
 using YC.GameplayMod.Patches;
 
-[assembly: MelonInfo(typeof(Plugin), MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION, MyPluginInfo.PLUGIN_AUTHORS)]
-[assembly: MelonGame(null, null)]
+[assembly: MelonInfo(typeof(GameplayMod), ModInfo.NAME, ModInfo.VERSION, ModInfo.AUTHORS, ModInfo.URL)]
+[assembly: MelonGame("Skyflare Studios", "Yaradiels Crown")]
 
 namespace YC.GameplayMod;
-public class Plugin : MelonMod
+public class GameplayMod : MelonMod
 {
-    internal static IPluginLogger Log;
+    internal static MelonLogger.Instance Log;
     internal static PluginConfig PluginConfig;
     internal static string ConfigPath;
     internal static string PluginAssets;
@@ -27,14 +22,14 @@ public class Plugin : MelonMod
     {
         base.OnInitializeMelon();
 
-        // Plugin startup logic
-        Log = new MelonPluginLogger(new MelonLogger.Instance(MyPluginInfo.PLUGIN_GUID));
+        // GameplayMod startup logic
+        Log = LoggerInstance;
         ConfigPath = MelonEnvironment.UserDataDirectory;
-        PluginAssets = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Assets");
-        PluginConfigs = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Configs");
-        PluginResources = Path.Combine(ConfigPath, MyPluginInfo.PLUGIN_GUID, "Resources");
+        PluginAssets = Path.Combine(ConfigPath, ModInfo.GUID, "Assets");
+        PluginConfigs = Path.Combine(ConfigPath, ModInfo.GUID, "Configs");
+        PluginResources = Path.Combine(ConfigPath, ModInfo.GUID, "Resources");
 
-        PluginConfig = new($"{MyPluginInfo.PLUGIN_GUID}.cfg");
+        PluginConfig = new($"{ModInfo.GUID}.cfg");
 
         DickStraponVisibilityMod.Load(PluginConfig);
         CharacterBodyRandomizerMod.Load(PluginConfig);
@@ -53,12 +48,12 @@ public class Plugin : MelonMod
         HarmonyInstance.PatchAll(typeof(DebugPatch));
 #endif
 
-        Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+        Log.Msg($"Mod {ModInfo.GUID} is loaded!");
     }
 
     public override void OnSceneWasLoaded(int buildIndex, string sceneName)
     {
-        Log.Info($"Scene loaded: Name: {sceneName}, BuildIndex: {buildIndex}");
+        Log.Msg($"Scene loaded: Name: {sceneName}, BuildIndex: {buildIndex}");
         if (buildIndex >= 2)
         {
             SexChoiceRealismMod.Prepare();

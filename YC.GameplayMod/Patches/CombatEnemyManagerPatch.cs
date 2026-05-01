@@ -1,16 +1,7 @@
-using System;
-using System.Diagnostics;
-using System.Reflection;
-using System.Xml.Linq;
-
 using BaseMod.Core.Extensions;
-
 using HarmonyLib;
-
 using Il2Cpp;
-
 using UnityEngine;
-
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Patches;
@@ -29,7 +20,7 @@ public class CombatEnemyManagerPatch
         }
         catch (Exception)
         {
-            Plugin.Log.Warn($"{nameof(CombatEnemyManagerPatch)} not applied due exeption");
+            GameplayMod.Log.Warning($"{nameof(CombatEnemyManagerPatch)} not applied due exeption");
             return false;
         }
     }
@@ -40,7 +31,7 @@ public class CombatEnemyManagerPatch
     [HarmonyPatch(typeof(CombatEnemyManager), nameof(CombatEnemyManager.RequestCharacterByName))]
     static bool CombatEnemyManagerRequestCharacterByNamePrefix(bool __runOriginal, string characterName)
     {
-        Plugin.Log.Info($"Request character: {characterName}");
+        GameplayMod.Log.Msg($"Request character: {characterName}");
         if (!string.IsNullOrWhiteSpace(characterName))
         {
             _requested = true;
@@ -66,14 +57,14 @@ public class CombatEnemyManagerPatch
 
         if (__result.TryGetComponentWithCast(out CharacterSex characterSex) && !string.IsNullOrWhiteSpace(characterSex.characterName))
         {
-            Plugin.Log.Info($"Customize character: {characterSex.characterName}");
+            GameplayMod.Log.Msg($"Customize character: {characterSex.characterName}");
             CharacterBodyRandomizerMod.Randomize(__instance, characterSex);
             characterSex.NPCSetup(characterSex.IsMale, characterSex.characterName, characterSex.characterAttributes.combatAI.isAlly);
             CharacterBodyRandomizerMod.SetFutaState(characterSex);
         }
 
         _requested = false;
-        Plugin.Log.Info($"Request character: {characterName}");
+        GameplayMod.Log.Msg($"Request character: {characterName}");
     }
 
     /*[HarmonyPostfix]
@@ -81,7 +72,7 @@ public class CombatEnemyManagerPatch
     [HarmonyPatch(typeof(Wardrobe), nameof(Wardrobe.Start))]
     static void WardrobeStartPostfix(Wardrobe __instance) {
         if (_requested)
-            Plugin.Log.Info($"Start wardrobe character: {__instance.characterSex.characterName}");
+            GameplayMod.Log.Msg($"Start wardrobe character: {__instance.characterSex.characterName}");
     }*/
 
     [HarmonyPostfix]
@@ -91,7 +82,7 @@ public class CombatEnemyManagerPatch
     {
         if (_requested)
         {
-            Plugin.Log.Info($"Load wardrobe character: {__instance.characterSex.characterName}");
+            GameplayMod.Log.Msg($"Load wardrobe character: {__instance.characterSex.characterName}");
         }
     }
 
@@ -102,7 +93,7 @@ public class CombatEnemyManagerPatch
     {
         if (_requested)
         {
-            Plugin.Log.Info($"Start CharacterSex character: {__instance.characterName}");
+            GameplayMod.Log.Msg($"Start CharacterSex character: {__instance.characterName}");
         }
     }
 
@@ -112,7 +103,7 @@ public class CombatEnemyManagerPatch
     static bool CombatEnemyManagerRandomizeEnemyPrefix(bool __runOriginal)
     {
         //_requested = true;
-        Plugin.Log.Debug($"randomize enemy");
+        GameplayMod.Log.Msg($"randomize enemy");
 
         if (!__runOriginal)
         {
@@ -136,7 +127,7 @@ public class CombatEnemyManagerPatch
         if (__instance.name.Equals("chest_size_R")) {
             var stack = new StackTrace(1);
             var caller = stack.GetFrame(0).GetMethod();
-            Plugin.Log.Debug($"{__instance.name} in {caller.DeclaringType?.Name}.{caller.Name} set {value} ({stack})");
+            GameplayMod.Log.Msg($"{__instance.name} in {caller.DeclaringType?.Name}.{caller.Name} set {value} ({stack})");
         }
 
         return true;

@@ -1,9 +1,5 @@
-using System;
-
 using HarmonyLib;
-
 using Il2Cpp;
-
 using YC.GameplayMod.Components;
 using YC.GameplayMod.Mods;
 
@@ -23,7 +19,7 @@ internal class CharacterAttributesPatch
         }
         catch (Exception)
         {
-            Plugin.Log.Warn($"{nameof(CharacterAttributesPatch)} not applied due exeption");
+            GameplayMod.Log.Warning($"{nameof(CharacterAttributesPatch)} not applied due exeption");
             return false;
         }
     }

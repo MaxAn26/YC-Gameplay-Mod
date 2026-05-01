@@ -1,9 +1,5 @@
 using HarmonyLib;
-
 using Il2Cpp;
-
-using UnityEngine;
-
 using YC.GameplayMod.Models;
 using YC.GameplayMod.Mods;
 
@@ -23,7 +19,7 @@ internal class BattleManagerPatch
         }
         catch (System.Exception)
         {
-            Plugin.Log.Warn($"{nameof(BattleManagerPatch)} not applied due exeption");
+            GameplayMod.Log.Warning($"{nameof(BattleManagerPatch)} not applied due exeption");
             return false;
         }
     }
@@ -45,7 +41,7 @@ internal class BattleManagerPatch
     [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.GetNewSexPositionCharmed))]
     static void BattleManagerGetNewSexPositionCharmedPostfix(CombatAction __0, ref int __result)
     {
-        Plugin.Log.Debug("Request Charmed position");
+        GameplayMod.Log.Msg("Request Charmed position");
         int newSexId = SexChoiceRealismMod.GetSexId(__0.caster.characterSex, __0.target.characterSex, PositionActionMode.Command);
         if (newSexId > 0)
         {
@@ -58,7 +54,7 @@ internal class BattleManagerPatch
     [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.GetNewSexPositionSpanking))]
     static void BattleManagerGetNewSexPositionSpankingPostfix(CombatAction __0, ref int __result)
     {
-        Plugin.Log.Debug("Request Spanking position");
+        GameplayMod.Log.Msg("Request Spanking position");
         int newSexId = SexChoiceRealismMod.GetSexId(__0.caster.characterSex, __0.target.characterSex, SexTag.Spanking);
         if (newSexId > 0)
         {
@@ -94,7 +90,7 @@ internal class BattleManagerPatch
             GameExtendMod.BattleManagerExecuteAction(ref action);
         }
 
-        Plugin.Log.Debug($"Execute Action: {action.actionName}, Caster: {action.caster.characterName}, Target: {action.target?.characterName}");
+        GameplayMod.Log.Msg($"Execute Action: {action.actionName}, Caster: {action.caster.characterName}, Target: {action.target?.characterName}");
 
         if (!__runOriginal)
         {

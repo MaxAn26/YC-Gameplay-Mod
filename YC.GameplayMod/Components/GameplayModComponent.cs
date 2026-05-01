@@ -1,15 +1,9 @@
-using System;
-
 using BaseMod.Core.Extensions;
 using BaseMod.Core.Utils;
-
 using Il2Cpp;
-
 using Il2CppInterop.Runtime.Attributes;
 using Il2CppInterop.Runtime.Injection;
-
 using UnityEngine;
-
 using YC.GameplayMod.Models;
 using YC.GameplayMod.Mods;
 
@@ -56,7 +50,7 @@ public class GameplayModComponent : MonoBehaviour
 
             if (gameObject.TryGetComponentWithCast(out CharacterSex characterSex))
             {
-                Plugin.Log.Info($"Register class for character {characterSex.characterName}");
+                GameplayMod.Log.Msg($"Register class for character {characterSex.characterName}");
                 Sex = characterSex;
 
                 LateInitialize();
@@ -69,7 +63,7 @@ public class GameplayModComponent : MonoBehaviour
         }
         catch (Exception e)
         {
-            Plugin.Log.Error(e);
+            GameplayMod.Log.Error(e);
             Destroy(this);
         }
     }
@@ -116,7 +110,7 @@ public class GameplayModComponent : MonoBehaviour
                     _timer -= Time.deltaTime;
                 } else {
                     SexCount--;
-                    Plugin.Log.Debug($"{Sex.characterName}: reduce SexCount");
+                    GameplayMod.Log.Msg($"{Sex.characterName}: reduce SexCount");
                     _timer = 30f;
                 }
             }
@@ -165,7 +159,7 @@ public class GameplayModComponent : MonoBehaviour
             }
         }
 
-        Plugin.Log.Info($"{Sex.characterName}: Role: {_characterRole}, PersonalityId: {PersonalityId}");
+        GameplayMod.Log.Msg($"{Sex.characterName}: Role: {_characterRole}, PersonalityId: {PersonalityId}");
 
         _componentInitialized = true;
     }

@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 using Il2Cpp;
 
 namespace YC.Unloader.Models;
@@ -17,7 +14,7 @@ internal class CombatTalentItem : IComparable<CombatTalentItem>
 
     public int CompareTo(CombatTalentItem other) => ID.CompareTo(other.ID);
 
-    internal static CombatTalentItem FromCombatTalent(CombatTalent item) => new CombatTalentItem
+    internal static CombatTalentItem FromCombatTalent(CombatTalent item) => new()
     {
         ID = item.ID,
         Name = item.talentName,

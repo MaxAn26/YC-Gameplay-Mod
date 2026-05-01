@@ -1,5 +1,3 @@
-using System;
-
 using Il2Cpp;
 
 namespace YC.Unloader.Models;
@@ -14,7 +12,7 @@ internal class ClothesItem : IComparable<ClothesItem>
 
     public int Slot { get; set; }
 
-    internal static ClothesItem FromClothes(Clothing clothing) => new ClothesItem
+    internal static ClothesItem FromClothes(Clothing clothing) => new()
     {
         ID = clothing.ID,
         Name = clothing.Name,

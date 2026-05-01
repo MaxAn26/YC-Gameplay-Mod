@@ -1,8 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+		<IsPluginLib>true</IsPluginLib>
 		<RootNamespace>YC.GameplayMod</RootNamespace>
 		<AssemblyName>YC.GameplayMod</AssemblyName>
-		<Description>YC Gameplay Mod</Description>
+		<Title>Yaradiels Crown. Gameplay Mod</Title>
+		<Description>MelonLoader mod for extend gameplay in Yaradiels Crown</Description>		
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -34,9 +36,6 @@
 		<Reference Include="Il2Cppmscorlib">
 			<HintPath>..\Libs\Il2Cppmscorlib.dll</HintPath>
 		</Reference>
-        <Reference Include="Tomlet">
-            <HintPath>..\Libs\Tomlet.dll</HintPath>
-        </Reference>
 		<Reference Include="UnityEngine.AnimationModule">
 			<HintPath>..\Libs\UnityEngine.AnimationModule.dll</HintPath>
 		</Reference>
@@ -47,58 +46,4 @@
 			<HintPath>..\Libs\UnityEngine.PhysicsModule.dll</HintPath>
 		</Reference>
 	</ItemGroup>
-
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<PropertyGroup>
-			<OutBaseDir>..\@Mods\</OutBaseDir>
-			<OutModsDir>$(OutBaseDir)Mods\</OutModsDir>
-			<OutUserLibsDir>$(OutBaseDir)UserLibs\</OutUserLibsDir>
-			<OutUserDataDir>$(OutBaseDir)UserData\$(AssemblyName)\</OutUserDataDir>
-		</PropertyGroup>
-
-		<ItemGroup>
-			<ModDll Include="$(TargetDir)$(TargetFileName)" />
-			<UserLibs Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName)" />
-			<PreConfiguredFiles Include="$(ProjectDir)PreConfiguredFiles\**\*.*" />
-		</ItemGroup>
-
-		<MakeDir Directories="$(OutModsDir)" />
-		<MakeDir Directories="$(OutUserLibsDir)" />
-
-		<RemoveDir Directories="$(OutUserDataDir)" />
-		<MakeDir Directories="$(OutUserDataDir)" />
-
-		<Copy SourceFiles="@(ModDll)" DestinationFolder="$(OutModsDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(UserLibs)" DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(OutUserDataDir)%(RecursiveDir)" />
-	</Target>
-
-	<Target Name="PostPublish" AfterTargets="Publish" Condition="'$(Configuration)'=='Release'">
-		<PropertyGroup>
-			<OutReleaseDir>..\@Release\</OutReleaseDir>
-			<OutBaseDir>$(OutReleaseDir)$(AssemblyName)\</OutBaseDir>
-			<OutModsDir>$(OutBaseDir)Mods\</OutModsDir>
-			<OutUserLibsDir>$(OutBaseDir)UserLibs\</OutUserLibsDir>
-			<OutUserDataDir>$(OutBaseDir)UserData\$(AssemblyName)\</OutUserDataDir>
-		</PropertyGroup>
-
-		<ItemGroup>
-			<ModDll Include="$(TargetDir)$(TargetFileName)" />
-			<UserLibs Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName)" />
-			<PreConfiguredFiles Include="$(ProjectDir)PreConfiguredFiles\**\*.*" />
-			<ReadmeFiles Include="$(ProjectDir)$(TargetName)_Readme.*" />
-		</ItemGroup>
-
-		<RemoveDir Directories="$(OutBaseDir)" />
-		<MakeDir Directories="$(OutModsDir)" />
-		<MakeDir Directories="$(OutUserLibsDir)" />
-		<MakeDir Directories="$(OutUserDataDir)" />
-
-		<Copy SourceFiles="@(ModDll)" DestinationFolder="$(OutModsDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(UserLibs)" DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(PreConfiguredFiles)" DestinationFolder="$(OutUserDataDir)%(RecursiveDir)" />
-		<Copy SourceFiles="@(ReadmeFiles)" DestinationFolder="$(OutBaseDir)" />
-
-		<ZipDirectory SourceDirectory="$(OutBaseDir)" DestinationFile="$(OutReleaseDir)$(AssemblyName)-$(AssemblyVersion).zip" Overwrite="true" />
-	</Target>
 </Project>

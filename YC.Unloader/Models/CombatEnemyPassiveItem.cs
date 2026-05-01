@@ -12,7 +12,7 @@ internal class CombatEnemyPassiveItem
     public int Effect2Type { get; set; }
     public int Effect2Value { get; set; }
     public bool IsElite { get; set; }
-    internal static CombatEnemyPassiveItem FromCombatTalent(CombatEnemyPassive item) => new CombatEnemyPassiveItem
+    internal static CombatEnemyPassiveItem FromCombatTalent(CombatEnemyPassive item) => new()
     {
         Name = item.passiveName,
         Description = item.passiveDescription,

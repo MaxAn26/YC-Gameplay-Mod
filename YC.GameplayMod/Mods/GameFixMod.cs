@@ -1,9 +1,5 @@
-using System;
-
 using BaseMod.Core;
-
 using Il2Cpp;
-
 using MelonLoader;
 
 namespace YC.GameplayMod.Mods;
@@ -26,7 +22,7 @@ internal class GameFixMod
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex.Message);
+            GameplayMod.Log.Error(ex.Message);
         }
     }
 
@@ -50,7 +46,7 @@ internal class GameFixMod
                 sexEncounter.SexIsLickingTarget = false;
                 sexEncounter.SexIsOralTarget = false;
 
-                Plugin.Log.Info($"Fix position ID {sexEncounter.SexID}");
+                GameplayMod.Log.Msg($"Fix position ID {sexEncounter.SexID}");
 
                 if (sexEncounter.TargetSex.IsMale || sexEncounter.TargetSex.IsFuta)
                 {

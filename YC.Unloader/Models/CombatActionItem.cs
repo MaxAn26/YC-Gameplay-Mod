@@ -42,7 +42,7 @@ internal class CombatActionItem
     public bool IsEscape { get; set; }
     public bool IsStatus { get; set; }
 
-    internal static CombatActionItem FromCombatTalent(CombatAction item) => new CombatActionItem
+    internal static CombatActionItem FromCombatTalent(CombatAction item) => new()
     {
         Name = item.actionName,
         Description = item.actionDescription,

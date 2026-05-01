@@ -1,6 +1,4 @@
-using System;
 using System.Text.Json.Serialization;
-
 using Il2Cpp;
 
 namespace YC.GameplayMod.Models;

@@ -1,8 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+		<IsPluginLib>true</IsPluginLib>
 		<RootNamespace>YC.GameTrainerMod</RootNamespace>
 		<AssemblyName>YC.GameTrainerMod</AssemblyName>
-		<Description>YC.Game Trainer Mod</Description>
+		<Title>Yaradiels Crown. Trainer</Title>
+		<Description>MelonLoader trainer mode for Yaradiels Crown</Description>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -30,9 +32,6 @@
 			<HintPath>..\Libs\Il2CppInterop.Runtime.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
-        <Reference Include="Tomlet">
-            <HintPath>..\Libs\Tomlet.dll</HintPath>
-        </Reference>
 		<Reference Include="UnityEngine.CoreModule">
 			<HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath>
 			<Private>false</Private>
@@ -46,54 +45,4 @@
 			<Private>false</Private>
 		</Reference>
 	</ItemGroup>
-
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<PropertyGroup>
-			<OutBaseDir>..\@Mods\</OutBaseDir>
-			<OutModsDir>$(OutBaseDir)Mods\</OutModsDir>
-			<OutUserLibsDir>$(OutBaseDir)UserLibs\</OutUserLibsDir>
-			<OutUserDataDir>$(OutBaseDir)UserData\$(AssemblyName)\</OutUserDataDir>
-		</PropertyGroup>
-
-		<ItemGroup>
-			<ModDll Include="$(TargetDir)$(TargetFileName)" />
-			<UserLibs Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName)" />
-		</ItemGroup>
-
-		<MakeDir Directories="$(OutModsDir)" />
-		<MakeDir Directories="$(OutUserLibsDir)" />
-
-		<RemoveDir Directories="$(OutUserDataDir)" />
-		<MakeDir Directories="$(OutUserDataDir)" />
-
-		<Copy SourceFiles="@(ModDll)" DestinationFolder="$(OutModsDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(UserLibs)" DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true" />
-	</Target>
-
-	<Target Name="PostPublish" AfterTargets="Publish" Condition="'$(Configuration)'=='Release'">
-		<PropertyGroup>
-			<OutReleaseDir>..\@Release\</OutReleaseDir>
-			<OutBaseDir>$(OutReleaseDir)$(AssemblyName)\</OutBaseDir>
-			<OutModsDir>$(OutBaseDir)Mods\</OutModsDir>
-			<OutUserLibsDir>$(OutBaseDir)UserLibs\</OutUserLibsDir>
-			<OutUserDataDir>$(OutBaseDir)UserData\$(AssemblyName)\</OutUserDataDir>
-		</PropertyGroup>
-
-		<ItemGroup>
-			<ModDll Include="$(TargetDir)$(TargetFileName)" />
-			<UserLibs Include="$(TargetDir)*.dll" Exclude="$(TargetDir)$(TargetFileName)" />
-			<ReadmeFiles Include="$(ProjectDir)$(TargetName)_Readme.*" />
-		</ItemGroup>
-
-		<RemoveDir Directories="$(OutBaseDir)" />
-		<MakeDir Directories="$(OutModsDir)" />
-		<MakeDir Directories="$(OutUserLibsDir)" />
-		<MakeDir Directories="$(OutUserDataDir)" />
-
-		<Copy SourceFiles="@(ModDll)" DestinationFolder="$(OutModsDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(UserLibs)" DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true" />
-		<Copy SourceFiles="@(ReadmeFiles)" DestinationFolder="$(OutBaseDir)" />
-
-		<ZipDirectory SourceDirectory="$(OutBaseDir)" DestinationFile="$(SolutionDir)@Release\$(AssemblyName)-$(AssemblyVersion).zip" Overwrite="true" />
-	</Target>
 </Project>

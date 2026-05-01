@@ -14,7 +14,7 @@ internal class InventoryItem
     public int Quality { get; set; }
 
 
-    internal static InventoryItem FromCombatConsumable(CombatConsumable item) => new InventoryItem
+    internal static InventoryItem FromCombatConsumable(CombatConsumable item) => new()
     {
         Id = item.itemID,
         Type = item.itemType,
@@ -27,7 +27,7 @@ internal class InventoryItem
         Quality = item.itemQuality,
     };
 
-    internal static InventoryItem FromCombatItem(CombatItem item) => new InventoryItem
+    internal static InventoryItem FromCombatItem(CombatItem item) => new()
     {
         Id = item.itemID,
         Type = item.itemType,
@@ -40,7 +40,7 @@ internal class InventoryItem
         Quality = item.itemQuality,
     };
 
-    internal static InventoryItem FromCombatTrinket(CombatTrinket item) => new InventoryItem
+    internal static InventoryItem FromCombatTrinket(CombatTrinket item) => new()
     {
         Id = item.itemID,
         Type = item.itemType,
@@ -53,7 +53,7 @@ internal class InventoryItem
         Quality = item.itemQuality,
     };
 
-    internal static InventoryItem FromCombatWeapon(CombatWeapon item) => new InventoryItem
+    internal static InventoryItem FromCombatWeapon(CombatWeapon item) => new()
     {
         Id = item.itemID,
         Type = item.itemType,

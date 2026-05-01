@@ -1,12 +1,10 @@
-using System;
-
 namespace YC.GameplayMod.Models;
 internal class PersonalitySexTags
 {
     public int Id { get; set; }
     public string Name { get; set; }
-    public PersonalitySexTags.SexTags Command { get; set; } = new();
-    public PersonalitySexTags.SexTags Perform { get; set; } = new();
+    public SexTags Command { get; set; } = new();
+    public SexTags Perform { get; set; } = new();
 
     internal PersonalitySexTags UpdateByStatus(CharacterStatus status)
     {
@@ -79,7 +77,7 @@ internal class PersonalitySexTags
         public SexTag AvoidTags { get; set; }
         public int Modifier { get; set; } = 1;
 
-        internal SexTags Copy() => new SexTags()
+        internal SexTags Copy() => new()
         {
             PreferredTags = PreferredTags,
             NeutralTags = NeutralTags,

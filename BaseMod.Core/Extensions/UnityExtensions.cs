@@ -1,8 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-
 using Il2CppInterop.Runtime;
 using Il2CppInterop.Runtime.InteropTypes;
-
 using UnityEngine;
 
 namespace BaseMod.Core.Extensions;

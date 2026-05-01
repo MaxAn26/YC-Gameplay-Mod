@@ -1,60 +1,42 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using BaseMod.Core.Extensions;
-
 using Il2Cpp;
-
 using Il2CppInterop.Runtime;
-using Il2CppInterop.Runtime.Attributes;
-using Il2CppInterop.Runtime.Injection;
-
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using MelonLoader;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using YC.GameTrainerMod;
+using YC.GameTrainerMod.Patches;
 
-namespace YC.GameTrainerMod.Components;
-public class GameTrainerComponent : MonoBehaviour
+[assembly: MelonInfo(typeof(GameTrainerMod), ModInfo.NAME, ModInfo.VERSION, ModInfo.AUTHORS, ModInfo.URL)]
+[assembly: MelonGame("Skyflare Studios", "Yaradiels Crown")]
+
+namespace YC.GameTrainerMod;
+public class GameTrainerMod : MelonMod
 {
-    private bool _guiCtrlVisible = false;
-    private bool _guiShiftVisible = false;
+    internal static MelonLogger.Instance Log;
 
-    private bool _isInitialized;
-    private Il2Cpp.Console _console;
-    private CombatHolder _combatHolder;
-
-    #region ctor
-    static GameTrainerComponent() => ClassInjector.RegisterTypeInIl2Cpp<GameTrainerComponent>();
-
-    public GameTrainerComponent() : base(ClassInjector.DerivedConstructorPointer<GameTrainerComponent>()) => ClassInjector.DerivedConstructorBody(this);
-
-    public GameTrainerComponent(IntPtr pointer) : base(pointer) { }
-
-    public void Initialize()
+    public override void OnInitializeMelon()
     {
-        try
-        {
-            if (_isInitialized)
-            {
-                return;
-            }
+        base.OnInitializeMelon();
 
-            _console = Zessentials.Instance.gameObject.GetComponentWithCast<Il2Cpp.Console>();
-            _combatHolder = Zessentials.Instance.gameObject.GetComponentWithCast<CombatHolder>();
+        Log = LoggerInstance;
 
-            Plugin.Log.Info("Register class in Zessentials game object");
-            _isInitialized = true;
-        }
-        catch (Exception e)
-        {
-            Plugin.Log.Error(e);
-            Destroy(this);
-        }
+        HarmonyInstance.PatchAll(typeof(CombatTalentInventoryPatch));
+
+        MelonEvents.OnUpdate.Subscribe(TrainerOnUpdate, 100);
+        MelonEvents.OnGUI.Subscribe(TrainerOnGUI, 100);
+
+        Log.Msg($"Mod {ModInfo.GUID} is loaded!");
     }
-    #endregion
 
-    #region Unity
-    public void Update()
+    private void WriteConsole(string message)
+    {
+        Il2Cpp.Console console = Zessentials.Instance.gameObject.GetComponentWithCast<Il2Cpp.Console>();
+        console?.ConsoleWrite(message);
+    }
+
+    private void TrainerOnUpdate()
     {
         if (SceneManager.GetActiveScene().buildIndex < 2 || Zessentials.Instance.battleManager.isInBattle)
         {
@@ -136,13 +118,12 @@ public class GameTrainerComponent : MonoBehaviour
         }
     }
 
-    public void OnGUI()
+    private void TrainerOnGUI()
     {
         if (SceneManager.GetActiveScene().buildIndex < 2 || Zessentials.Instance.battleManager.isInBattle)
         {
             return;
         }
-
         if (!_guiCtrlVisible && !_guiShiftVisible)
         {
             GUI.Label(new Rect(Screen.width - 260f, 10f, 200f, 20f), "Ctrl + F1: Show Trainer menu for Control key");
@@ -172,31 +153,38 @@ public class GameTrainerComponent : MonoBehaviour
             GUI.Label(new Rect(x, 50f, 250f, 20f), $"Shift + Num 2: God Mode {(IsGodMode ? "Enabled" : "Disabled")}");
         }
     }
-    #endregion
 
     #region Control mathods
+    private bool _guiCtrlVisible = false;
+
     private void AddCredits()
     {
         CharacterDataa.Instance.credits += 100000;
-        _console?.ConsoleWrite("Add 100 000 credits");
+        WriteConsole("Add 100 000 credits");
     }
 
     private void AddCombatPoints()
     {
         CharacterDataa.Instance.statusDATA.freeCombatTalentPoints += 100;
-        _console?.ConsoleWrite("Add 100 combat talent points");
+        WriteConsole( "Add 100 combat talent points" );
     }
 
     private void AddEroPoints()
     {
         CharacterDataa.Instance.statusDATA.freeEroTalentPoints += 100;
-        _console?.ConsoleWrite("Add 100 ero talent points");
+        WriteConsole( "Add 100 ero talent points" );
     }
 
     private void OpenAllWeapons()
     {
         try
         {
+            CombatHolder combatHolder = Zessentials.Instance.gameObject.GetComponentWithCast<CombatHolder>();
+            if (combatHolder is null)
+            {
+                return;
+            }
+
             foreach (InventoryItem item in CharacterDataa.Instance.inventory.items)
             {
                 if (item.itemType is 1 && !item.itemName.Equals("Nothing") && !item.itemName.Equals("Unarmed"))
@@ -211,23 +199,23 @@ public class GameTrainerComponent : MonoBehaviour
                 }
             }
 
-            List<CombatWeapon> newWeapons = [.. _combatHolder.weapons];
+            List<CombatWeapon> newWeapons = [.. combatHolder.weapons];
             newWeapons = [.. newWeapons.OrderBy(w => w.itemName)];
 
             foreach (CombatWeapon newWeapon in newWeapons)
             {
                 if (!CharacterDataa.Instance.inventory.HasItem(newWeapon.itemName))
                 {
-                    Plugin.Log.Debug($"Add weapon: {newWeapon.itemName}");
+                    Log.Msg($"Add weapon: {newWeapon.itemName}");
                     CharacterDataa.Instance.inventory.AddItem(newWeapon.itemName, newWeapon.itemType, 1, 4, newWeapon.itemPrice);
                 }
             }
 
-            _console.ConsoleWrite("All weapons was opened and upgraded");
+            WriteConsole("All weapons was opened and upgraded");
         }
         catch (Exception e)
         {
-            Plugin.Log.Error(e);
+            Log.Error(e);
         }
     }
 
@@ -235,6 +223,12 @@ public class GameTrainerComponent : MonoBehaviour
     {
         try
         {
+            CombatHolder combatHolder = Zessentials.Instance.gameObject.GetComponentWithCast<CombatHolder>();
+            if (combatHolder is null)
+            {
+                return;
+            }
+
             foreach (InventoryItem item in CharacterDataa.Instance.inventory.items)
             {
                 if (item.itemType is 7 && !item.itemName.Equals("Nothing") && !item.itemName.Equals("Unarmed"))
@@ -249,23 +243,23 @@ public class GameTrainerComponent : MonoBehaviour
                 }
             }
 
-            List<CombatTrinket> newTrinkets = [.. _combatHolder.trinkets];
+            List<CombatTrinket> newTrinkets = [.. combatHolder.trinkets];
             newTrinkets = [.. newTrinkets.OrderBy(t => t.itemName)];
 
             foreach (CombatTrinket newTrinket in newTrinkets)
             {
                 if (!CharacterDataa.Instance.inventory.HasItem(newTrinket.itemName))
                 {
-                    Plugin.Log.Debug($"Add trinket: {newTrinket.itemName}");
+                    Log.Msg($"Add trinket: {newTrinket.itemName}");
                     CharacterDataa.Instance.inventory.AddItem(newTrinket.itemName, newTrinket.itemType, 1, 4, newTrinket.itemPrice);
                 }
             }
 
-            _console.ConsoleWrite("All trinkets was opened and upgraded");
+            WriteConsole("All trinkets was opened and upgraded");
         }
         catch (Exception e)
         {
-            Plugin.Log.Error(e);
+            Log.Error(e);
         }
     }
 
@@ -273,30 +267,36 @@ public class GameTrainerComponent : MonoBehaviour
     {
         try
         {
-            List<CombatConsumable> consumables = [.. _combatHolder.consumables];
+            CombatHolder combatHolder = Zessentials.Instance.gameObject.GetComponentWithCast<CombatHolder>();
+            if (combatHolder is null)
+            {
+                return;
+            }
+
+            List<CombatConsumable> consumables = [.. combatHolder.consumables];
             consumables = [.. consumables.Where(c => c.itemType == 6).OrderBy(c => c.itemName)];
 
             foreach (CombatConsumable consumable in consumables)
             {
-                Plugin.Log.Debug($"Add consumable: {consumable.itemName} x100");
+                Log.Msg($"Add consumable: {consumable.itemName} x100");
                 CharacterDataa.Instance.inventory.AddItem(consumable.itemName, consumable.itemType, 100, consumable.itemQuality, consumable.itemPrice);
             }
 
-            List<CombatItem> questItems = [.. _combatHolder.questItems];
+            List<CombatItem> questItems = [.. combatHolder.questItems];
             foreach (CombatItem questItem in questItems)
             {
                 if (!questItem.itemName.Equals("Credits"))
                 {
-                    Plugin.Log.Debug($"Add consumable: {questItem.itemName} x100");
+                    Log.Msg($"Add consumable: {questItem.itemName} x100");
                     CharacterDataa.Instance.inventory.AddItem(questItem.itemName, questItem.itemType, 100, questItem.itemQuality, questItem.itemPrice);
                 }
             }
 
-            _console.ConsoleWrite("All scrolls and stones was added in your Inventory");
+            WriteConsole("All scrolls and stones was added in your Inventory");
         }
         catch (Exception e)
         {
-            Plugin.Log.Error(e);
+            Log.Error(e);
         }
     }
 
@@ -304,20 +304,26 @@ public class GameTrainerComponent : MonoBehaviour
     {
         try
         {
-            List<CombatConsumable> consumables = [.. _combatHolder.consumables];
+            CombatHolder combatHolder = Zessentials.Instance.gameObject.GetComponentWithCast<CombatHolder>();
+            if (combatHolder is null)
+            {
+                return;
+            }
+
+            List<CombatConsumable> consumables = [.. combatHolder.consumables];
             consumables = [.. consumables.Where(c => c.itemType == 3).OrderBy(c => c.itemName)];
 
             foreach (CombatConsumable consumable in consumables)
             {
-                Plugin.Log.Debug($"Add consumable: {consumable.itemName} x100");
+                Log.Msg($"Add consumable: {consumable.itemName} x100");
                 CharacterDataa.Instance.inventory.AddItem(consumable.itemName, consumable.itemType, 100, consumable.itemQuality, consumable.itemPrice);
             }
 
-            _console.ConsoleWrite("All tonics was added in your Inventory");
+            WriteConsole("All tonics was added in your Inventory");
         }
         catch (Exception e)
         {
-            Plugin.Log.Error(e);
+            Log.Error(e);
         }
     }
 
@@ -325,8 +331,14 @@ public class GameTrainerComponent : MonoBehaviour
     {
         try
         {
+            CombatHolder combatHolder = Zessentials.Instance.gameObject.GetComponentWithCast<CombatHolder>();
+            if (combatHolder is null)
+            {
+                return;
+            }
+
             List<string> actionsList = [];
-            Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<UnityEngine.Object> actionsObj = Resources.FindObjectsOfTypeAll(Il2CppType.From(typeof(CombatAction)));
+            Il2CppReferenceArray<UnityEngine.Object> actionsObj = Resources.FindObjectsOfTypeAll(Il2CppType.From(typeof(CombatAction)));
             foreach (UnityEngine.Object actionObj in actionsObj)
             {
                 CombatAction action = actionObj.TryCast<CombatAction>();
@@ -336,23 +348,23 @@ public class GameTrainerComponent : MonoBehaviour
                 }
             }
 
-            List<CombatConsumable> consumables = [.. _combatHolder.consumables];
+            List<CombatConsumable> consumables = [.. combatHolder.consumables];
             consumables = [.. consumables.Where(c => c.itemType == 4 && actionsList.Contains(c.consumableEffectAlternative)).OrderBy(c => c.itemName)];
 
             foreach (CombatConsumable consumable in consumables)
             {
                 if (!consumable.itemName.Equals("Sex databook") && !CharacterDataa.Instance.inventory.HasItem(consumable.itemName) && !IsKnown(consumable.consumableEffectAlternative))
                 {
-                    Plugin.Log.Debug($"Add consumable: {consumable.itemName}");
+                    Log.Msg($"Add consumable: {consumable.itemName}");
                     CharacterDataa.Instance.inventory.AddItem(consumable.itemName, consumable.itemType, 1, consumable.itemQuality, consumable.itemPrice);
                 }
             }
 
-            _console.ConsoleWrite("All manuals was added in your Inventory");
+            WriteConsole("All manuals was added in your Inventory");
         }
         catch (Exception e)
         {
-            Plugin.Log.Error(e);
+            Log.Error(e);
         }
 
         static bool IsKnown(string manualName)
@@ -375,6 +387,8 @@ public class GameTrainerComponent : MonoBehaviour
     #endregion Control mathods
 
     #region Shift mathods
+    private bool _guiShiftVisible = false;
+
     private void UpLevelToMax()
     {
         try
@@ -395,11 +409,11 @@ public class GameTrainerComponent : MonoBehaviour
                 }
             }
 
-            _console?.ConsoleWrite($"Your level was increased till: {CharacterDataa.Instance.characterLevel}");
+            WriteConsole($"Your level was increased till: {CharacterDataa.Instance.characterLevel}");
         }
         catch (Exception e)
         {
-            Plugin.Log.Error(e);
+            Log.Error(e);
         }
     }
 
@@ -407,13 +421,7 @@ public class GameTrainerComponent : MonoBehaviour
     private void SwitchGodMod()
     {
         IsGodMode = !IsGodMode;
-        _console?.ConsoleWrite($"God Mode: {(IsGodMode ? "Activated" : "Deactivated")}");
+        WriteConsole($"God Mode: {(IsGodMode ? "Activated" : "Deactivated")}");
     }
     #endregion Shift mathods
-
-    [HideFromIl2Cpp]
-    public static void RegisterClass(MonoBehaviour monoBehaviour) => RegisterClass(monoBehaviour.gameObject);
-
-    [HideFromIl2Cpp]
-    public static void RegisterClass(GameObject gameObject) => gameObject.AddComponentWithAction<GameTrainerComponent>(component => component.Initialize());
 }

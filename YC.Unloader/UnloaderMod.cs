@@ -1,32 +1,27 @@
-using System.IO;
-
-using BaseMod.Core.Logger;
-
 using MelonLoader;
 using MelonLoader.Utils;
-
 using YC.Unloader;
 using YC.Unloader.Services;
 
-[assembly: MelonInfo(typeof(Plugin), MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION, MyPluginInfo.PLUGIN_AUTHORS)]
-[assembly: MelonGame(null, null)]
+[assembly: MelonInfo(typeof(UnloaderMod), ModInfo.NAME, ModInfo.VERSION, ModInfo.AUTHORS, ModInfo.URL)]
+[assembly: MelonGame("Skyflare Studios", "Yaradiels Crown")]
 
 namespace YC.Unloader;
-public class Plugin : MelonMod
+public class UnloaderMod : MelonMod
 {
-    internal static IPluginLogger Log;
+    internal static MelonLogger.Instance Log;
     internal static string PluginResources;
 
     public override void OnInitializeMelon()
     {
         base.OnInitializeMelon();
 
-        // Plugin startup logic
-        Log = new MelonPluginLogger(new MelonLogger.Instance(MyPluginInfo.PLUGIN_GUID));
+        // UnloaderMod startup logic
+        Log = LoggerInstance;
 
-        PluginResources = Path.Combine(MelonEnvironment.UserDataDirectory, MyPluginInfo.PLUGIN_GUID, "Resources");
+        PluginResources = Path.Combine(MelonEnvironment.UserDataDirectory, ModInfo.GUID, "Resources");
 
-        Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+        Log.Msg($"Mod {ModInfo.GUID} is loaded!");
     }
 
     public override void OnSceneWasLoaded(int buildIndex, string sceneName)

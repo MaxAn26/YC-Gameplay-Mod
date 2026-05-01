@@ -1,16 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using BaseMod.Core;
 using BaseMod.Core.Utils;
-
 using Il2Cpp;
-
 using MelonLoader;
-
 using UnityEngine;
-
 using YC.GameplayMod.Extensions;
 using YC.GameplayMod.Models;
 
@@ -45,7 +37,7 @@ internal class GameExtendMod
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex.Message);
+            GameplayMod.Log.Error(ex.Message);
         }
     }
 
@@ -70,7 +62,7 @@ internal class GameExtendMod
 
             if (assistSex.IsPlayer)
             {
-                Plugin.Log.Debug("Player join to Threesome");
+                GameplayMod.Log.Msg("Player join to Threesome");
                 SexEncounter.print("Player join to Threesome");
                 if (casterSex.characterAttributes.combatAI.isAlly && !casterSex.characterAttributes.CheckForStatus("Charmed"))
                 {
@@ -96,7 +88,7 @@ internal class GameExtendMod
             }
             else if (assistSex.characterAttributes.combatAI.isAlly)
             {
-                Plugin.Log.Debug("Ally join to Threesome");
+                GameplayMod.Log.Msg("Ally join to Threesome");
                 Zessentials.Instance.battleManager.console.ConsoleWrite("Ally join to Threesome");
                 if (targetSex.IsPlayer)
                 {
@@ -119,7 +111,7 @@ internal class GameExtendMod
             }
             else if (assistSex.characterAttributes.combatAI.isElite)
             {
-                Plugin.Log.Debug("Elite enemy join to Threesome");
+                GameplayMod.Log.Msg("Elite enemy join to Threesome");
                 Zessentials.Instance.battleManager.console.ConsoleWrite("Elite enemy join to Threesome");
                 if (casterSex.IsPlayer || casterSex.characterAttributes.combatAI.isAlly)
                 {
@@ -136,7 +128,7 @@ internal class GameExtendMod
             }
             else
             {
-                Plugin.Log.Debug("Enemy join to Threesome");
+                GameplayMod.Log.Msg("Enemy join to Threesome");
                 Zessentials.Instance.battleManager.console.ConsoleWrite("Enemy join to Threesome");
                 if (casterSex.IsPlayer || casterSex.characterAttributes.combatAI.isAlly)
                 {
@@ -200,7 +192,7 @@ internal class GameExtendMod
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex.Message);
+            GameplayMod.Log.Error(ex.Message);
             return false;
         }
     }
@@ -271,12 +263,12 @@ internal class GameExtendMod
             companionWeight += Math.Max((int)(companion.currentPleasure / 10000f * 10), 1);
         }
 
-        Plugin.Log.Debug($"BattleManagerAssistAlly weights: Player: {playerWeight}, Companion: {companionWeight}");
+        GameplayMod.Log.Msg($"BattleManagerAssistAlly weights: Player: {playerWeight}, Companion: {companionWeight}");
 
         if (companionWeight >= playerWeight)
         {
             combatAction.target = companion;
-            Plugin.Log.Debug($"'{combatAction.caster.characterSex.characterName}': Assist to '{combatAction.target.characterSex.characterName}'");
+            GameplayMod.Log.Msg($"'{combatAction.caster.characterSex.characterName}': Assist to '{combatAction.target.characterSex.characterName}'");
             Zessentials.Instance.battleManager.console.ConsoleWrite($"{combatAction.caster.characterSex.characterName}: will assist to {combatAction.target.characterSex.characterName}");
         }
 
@@ -383,7 +375,7 @@ internal class GameExtendMod
             score += CalculateEffectivenessScore(action, characterAttributes, caps) * 0.3f;
             score += RandomUtils.Float(0f, 0.2f);
 
-            Plugin.Log.Debug($"{characterAttributes.characterName}: score: {score}");
+            GameplayMod.Log.Msg($"{characterAttributes.characterName}: score: {score}");
             return score;
         }
 
@@ -635,7 +627,7 @@ internal class GameExtendMod
         {
             if (newTarget != action.target)
             {
-                Plugin.Log.Debug($"Change CombatAction target from {action.target.characterName} to {newTarget.characterName}");
+                GameplayMod.Log.Msg($"Change CombatAction target from {action.target.characterName} to {newTarget.characterName}");
                 action.target = newTarget;
                 Zessentials.Instance.battleManager.console.ConsoleWrite($"{action.caster.characterName}: will attack {action.target.characterName}");
             }

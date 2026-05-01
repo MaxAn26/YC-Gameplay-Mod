@@ -1,9 +1,5 @@
-using System;
-
 using HarmonyLib;
-
 using Il2Cpp;
-
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Patches;
@@ -22,7 +18,7 @@ internal class SexEncounterPatch
         }
         catch (Exception)
         {
-            Plugin.Log.Warn($"{nameof(SexEncounterPatch)} not applied due exeption");
+            GameplayMod.Log.Warning($"{nameof(SexEncounterPatch)} not applied due exeption");
             return false;
         }
     }

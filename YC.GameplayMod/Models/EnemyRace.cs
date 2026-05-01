@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace YC.GameplayMod.Models;
 public class EnemyRace
 {

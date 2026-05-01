@@ -264,6 +264,9 @@ dotnet_diagnostic.CA1812.severity = none
 # CA1819: Properties should not return arrays
 dotnet_diagnostic.CA1819.severity = none
 
+# CA1822: Пометьте члены как статические
+dotnet_diagnostic.CA1822.severity = none
+
 # CA1848: Use the LoggerMessage delegates
 dotnet_diagnostic.CA1848.severity = none
 

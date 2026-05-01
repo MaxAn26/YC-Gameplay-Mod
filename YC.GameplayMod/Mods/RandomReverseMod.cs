@@ -1,12 +1,7 @@
-using System;
-
 using BaseMod.Core;
 using BaseMod.Core.Utils;
-
 using Il2Cpp;
-
 using MelonLoader;
-
 using UnityEngine.SceneManagement;
 
 namespace YC.GameplayMod.Mods;
@@ -45,7 +40,7 @@ internal class RandomReverseMod
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex.Message);
+            GameplayMod.Log.Error(ex.Message);
         }
     }
 
@@ -109,7 +104,7 @@ internal class RandomReverseMod
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error(ex.Message);
+            GameplayMod.Log.Error(ex.Message);
             return;
         }
     }
@@ -117,6 +112,6 @@ internal class RandomReverseMod
     static void ActivateReverse(SexEncounter sexEncounter)
     {
         sexEncounter.ReverseMode = !sexEncounter.ReverseMode;
-        Plugin.Log.Info("Reverse mod activated");
+        GameplayMod.Log.Msg("Reverse mod activated");
     }
 }
