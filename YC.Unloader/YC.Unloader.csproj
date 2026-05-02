@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<IsPluginLib>true</IsPluginLib>
 
-        <ModGUID>YC.Unloader</ModGUID>
 		<ModName>Yaradiels Crown. Unloader</ModName>
 		<ModDescription>MelonLoader unloader mode for Yaradiels Crown</ModDescription>
 	</PropertyGroup>

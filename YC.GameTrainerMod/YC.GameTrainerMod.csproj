@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<IsPluginLib>true</IsPluginLib>
 
-        <ModGUID>YC.GameTrainerMod</ModGUID>
 		<ModName>Yaradiels Crown. Trainer</ModName>
 		<ModDescription>MelonLoader trainer mode for Yaradiels Crown</ModDescription>
 	</PropertyGroup>

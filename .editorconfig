@@ -14,6 +14,32 @@ tab_width = 4
 end_of_line = lf
 insert_final_newline = true
 
+# Xml project files
+[*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,nativeproj,locproj}]
+indent_size = 2
+
+# Xml build files
+[*.builds]
+indent_size = 2
+
+# Xml files
+[*.{resx,ruleset,slnx,stylecop,xml}]
+indent_size = 2
+
+# Xml resource files
+[*.resx]
+# match Visual Studio behavior
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# Xml config files
+[*.{props,targets,config,nuspec}]
+indent_size = 2
+
+# Data serialization
+[*.{json,yaml,yml}]
+indent_size = 2
+
 # C# files
 [*.cs]
 

@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<IsPluginLib>true</IsPluginLib>
 		
-        <ModGUID>BoL4oNoK.YC.GameplayMod</ModGUID>
         <ModName>Yaradiels Crown. Gameplay Mod</ModName>
         <ModDescription>MelonLoader mod for extend gameplay in Yaradiels Crown</ModDescription>		
 	</PropertyGroup>
