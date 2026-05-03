@@ -27,8 +27,8 @@
   <PropertyGroup>
     <IsPluginLib Condition="'$(IsPluginLib)' == ''">false</IsPluginLib>
 
-    <GameDeveloper>Citor3 Entertainment Studio Oy</GameDeveloper>
-    <GameName>FD3</GameName>
+    <GameDeveloper>Skyflare Studios</GameDeveloper>
+    <GameName>Yaradiels Crown</GameName>
 
     <ModDeveloper>BoL4oNoK</ModDeveloper>
     <ModDescription />

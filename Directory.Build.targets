@@ -31,27 +31,30 @@
 
     <Message Importance="high" Text="===> Copying files to Mods: $(OutModsDir)" />
     <Copy
-        SourceFiles="@(ModDll)"
-        DestinationFolder="$(OutModsDir)"
-        SkipUnchangedFiles="true" />
+      SourceFiles="@(ModDll)"
+      DestinationFolder="$(OutModsDir)"
+      SkipUnchangedFiles="true" />
 
     <Message
-        Importance="high"
-        Text="===> Copying files to UserLibs: $(OutUserLibsDir)"
-        Condition="'@(UserLibs)' != ''" />
+      Importance="high"
+      Text="===> Copying files to UserLibs: $(OutUserLibsDir)"
+      Condition="'@(UserLibs)' != ''" />
     <Copy
-        SourceFiles="@(UserLibs)"
-        DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true"
-        Condition="'@(UserLibs)' != ''"  />
+      SourceFiles="@(UserLibs)"
+      DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true"
+      Condition="'@(UserLibs)' != ''"  />
 
     <Message
-        Importance="high"
-        Text="===> Copying files to UserData: $(OutUserLibsDir)"
-        Condition="'@(PreConfiguredFiles)' != ''" />
+      Importance="high"
+      Text="===> Copying files to UserData: $(OutUserDataDir)"
+      Condition="'@(PreConfiguredFiles)' != ''" />
+    <RemoveDir
+      Directories="$(OutUserDataDir)"
+      Condition="'@(PreConfiguredFiles)' != ''" />
     <Copy
-        SourceFiles="@(PreConfiguredFiles)"
-        DestinationFolder="$(OutUserDataDir)%(RecursiveDir)"
-        Condition="'@(PreConfiguredFiles)' != ''" />
+      SourceFiles="@(PreConfiguredFiles)"
+      DestinationFolder="$(OutUserDataDir)%(RecursiveDir)"
+      Condition="'@(PreConfiguredFiles)' != ''" />
   </Target>
 
   <Target Name="CopyModsAfterPublish" AfterTargets="Publish" Condition="'$(IsPluginLib)' == 'true' AND '$(Configuration)'=='Release'">
@@ -78,36 +81,36 @@
 
     <Message Importance="high" Text="===> Copying files to Mods: $(OutModsDir)" />
     <Copy
-        SourceFiles="@(ModDll)"
-        DestinationFolder="$(OutModsDir)"
-        SkipUnchangedFiles="true" />
+      SourceFiles="@(ModDll)"
+      DestinationFolder="$(OutModsDir)"
+      SkipUnchangedFiles="true" />
 
     <Message
-        Importance="high"
-        Text="===> Copying files to UserLibs: $(OutUserLibsDir)"
-        Condition="'@(UserLibs)' != ''" />
+      Importance="high"
+      Text="===> Copying files to UserLibs: $(OutUserLibsDir)"
+      Condition="'@(UserLibs)' != ''" />
     <Copy
-        SourceFiles="@(UserLibs)"
-        DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true"
-        Condition="'@(UserLibs)' != ''"  />
+      SourceFiles="@(UserLibs)"
+      DestinationFolder="$(OutUserLibsDir)" SkipUnchangedFiles="true"
+      Condition="'@(UserLibs)' != ''"  />
 
     <Message
-        Importance="high"
-        Text="===> Copying files to UserData: $(OutUserLibsDir)"
-        Condition="'@(PreConfiguredFiles)' != ''" />
+      Importance="high"
+      Text="===> Copying files to UserData: $(OutUserLibsDir)"
+      Condition="'@(PreConfiguredFiles)' != ''" />
     <Copy
-        SourceFiles="@(PreConfiguredFiles)"
-        DestinationFolder="$(OutUserDataDir)%(RecursiveDir)"
-        Condition="'@(PreConfiguredFiles)' != ''" />
+      SourceFiles="@(PreConfiguredFiles)"
+      DestinationFolder="$(OutUserDataDir)%(RecursiveDir)"
+      Condition="'@(PreConfiguredFiles)' != ''" />
 
     <Message
-        Importance="high"
-        Text="===> Copying files to mod root dir: $(OutRootDir)"
-        Condition="'@(ReadmeFiles)' != ''" />
+      Importance="high"
+      Text="===> Copying files to mod root dir: $(OutRootDir)"
+      Condition="'@(ReadmeFiles)' != ''" />
     <Copy
-        SourceFiles="@(ReadmeFiles)"
-        DestinationFolder="$(OutRootDir)"
-        Condition="'@(ReadmeFiles)' != '' "/>
+      SourceFiles="@(ReadmeFiles)"
+      DestinationFolder="$(OutRootDir)"
+      Condition="'@(ReadmeFiles)' != '' "/>
 
     <Message
         Importance="high"
