@@ -50,7 +50,7 @@ public class GameplayModComponent : MonoBehaviour
 
             if (gameObject.TryGetComponentWithCast(out CharacterSex characterSex))
             {
-                GameplayMod.Log.Msg($"Register class for character {characterSex.characterName}");
+                Core.LogInfo($"Register class for character {characterSex.characterName}");
                 Sex = characterSex;
 
                 LateInitialize();
@@ -63,7 +63,7 @@ public class GameplayModComponent : MonoBehaviour
         }
         catch (Exception e)
         {
-            GameplayMod.Log.Error(e);
+            Core.LogError(e);
             Destroy(this);
         }
     }
@@ -110,7 +110,7 @@ public class GameplayModComponent : MonoBehaviour
                     _timer -= Time.deltaTime;
                 } else {
                     SexCount--;
-                    GameplayMod.Log.Msg($"{Sex.characterName}: reduce SexCount");
+                    Core.Log.Msg($"{Sex.characterName}: reduce SexCount");
                     _timer = 30f;
                 }
             }
@@ -159,7 +159,7 @@ public class GameplayModComponent : MonoBehaviour
             }
         }
 
-        GameplayMod.Log.Msg($"{Sex.characterName}: Role: {_characterRole}, PersonalityId: {PersonalityId}");
+        Core.LogInfo($"{Sex.characterName}: Role: {_characterRole}, PersonalityId: {PersonalityId}");
 
         _componentInitialized = true;
     }

@@ -4,6 +4,8 @@ using YC.GameplayMod.Components;
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Patches;
+
+[HarmonyPatch(typeof(CharacterAttributes))]
 internal class CharacterAttributesPatch
 {
     internal static bool Prepare()
@@ -19,15 +21,15 @@ internal class CharacterAttributesPatch
         }
         catch (Exception)
         {
-            GameplayMod.Log.Warning($"{nameof(CharacterAttributesPatch)} not applied due exeption");
+            Core.LogWarning($"{nameof(CharacterAttributesPatch)} not applied due exeption");
             return false;
         }
     }
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.Initialize))]
-    [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.InitializeAlly))]
+    [HarmonyPatch(nameof(CharacterAttributes.Initialize))]
+    [HarmonyPatch(nameof(CharacterAttributes.InitializeAlly))]
     static void CharacterAttributesInitializePostfix(CharacterAttributes __instance)
     {
         if (!string.IsNullOrWhiteSpace(__instance.characterSex.characterName))
@@ -38,6 +40,6 @@ internal class CharacterAttributesPatch
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(CharacterAttributes), nameof(CharacterAttributes.Rest))]
+    [HarmonyPatch(nameof(CharacterAttributes.Rest))]
     static void CharacterAttributesRestPostfix(CharacterAttributes __instance) => SexChoiceRealismMod.ResetSexCount(__instance);
 }

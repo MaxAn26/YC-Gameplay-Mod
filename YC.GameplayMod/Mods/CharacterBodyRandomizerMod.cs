@@ -42,26 +42,26 @@ public class CharacterBodyRandomizerMod
 
             if (Enabled.Value)
             {
-                if (!JsonUtils.TryDeserialize(GameplayMod.PluginResources, "BodyRestrictions.json", out BodyRestrictions bodyRestrictions))
+                if (!JsonUtils.TryDeserialize(Core.PluginResources, "BodyRestrictions.json", out BodyRestrictions bodyRestrictions))
                 {
                     bodyRestrictions = GetBodyRestrictions();
-                    JsonUtils.TrySerialize(GameplayMod.PluginResources, "BodyRestrictions.json", bodyRestrictions);
+                    JsonUtils.TrySerialize(Core.PluginResources, "BodyRestrictions.json", bodyRestrictions);
                 }
 
                 BodyRestrictions = bodyRestrictions;
 
-                if (!JsonUtils.TryDeserialize(GameplayMod.PluginResources, "BodyProfileWeights.json", out List<BodyProfile> profiles))
+                if (!JsonUtils.TryDeserialize(Core.PluginResources, "BodyProfileWeights.json", out List<BodyProfile> profiles))
                 {
                     profiles = GetBodyProfiles();
-                    JsonUtils.TrySerialize(GameplayMod.PluginResources, "BodyProfileWeights.json", profiles);
+                    JsonUtils.TrySerialize(Core.PluginResources, "BodyProfileWeights.json", profiles);
                 }
 
                 BodyProfiles.AddRange(profiles);
 
-                if (!JsonUtils.TryDeserialize(GameplayMod.PluginResources, "EnemyEthnicities.json", out List<EnemyEthnicity> ethnicities))
+                if (!JsonUtils.TryDeserialize(Core.PluginResources, "EnemyEthnicities.json", out List<EnemyEthnicity> ethnicities))
                 {
                     ethnicities = GetEnemyEthnicities();
-                    JsonUtils.TrySerialize(GameplayMod.PluginResources, "EnemyEthnicities.json", ethnicities);
+                    JsonUtils.TrySerialize(Core.PluginResources, "EnemyEthnicities.json", ethnicities);
                 }
 
                 foreach (EnemyEthnicity ethnicity in ethnicities)
@@ -81,7 +81,7 @@ public class CharacterBodyRandomizerMod
         }
         catch (Exception ex)
         {
-            GameplayMod.Log.Error(ex.Message);
+            Core.LogError(ex);
         }
     }
 
@@ -124,14 +124,14 @@ public class CharacterBodyRandomizerMod
                 BodyProfile profile = GetBodyProfile(ethnicity.BodyProfileWeights);
                 CharacterBody body = CalculateBody(profile, characterSex.IsMale);
 
-                GameplayMod.Log.Msg($"{characterSex.characterName}: Ethnicity: {ethnicity.Name}, Profile: {profile.Name}, {body}");
+                Core.LogDebug($"{characterSex.characterName}: Ethnicity: {ethnicity.Name}, Profile: {profile.Name}, {body}");
 
                 #region Character skin
                 Color skinColor = ethnicity.SkinTones.Count > 0
                     ? ethnicity.SkinTones.RandomItem().ToUnityColor()
                     : RandomUtils.Item([.. combatEnemyManager.SkinTones]);
 
-                GameplayMod.Log.Msg($"{wardrobe.characterSex.characterName}: skin color: {skinColor}");
+                Core.LogDebug($"{wardrobe.characterSex.characterName}: skin color: {skinColor}");
 
                 wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Albedo_Tint", skinColor);
                 #endregion Character skin
@@ -163,7 +163,7 @@ public class CharacterBodyRandomizerMod
                     hairColor = combatEnemyManager.HairColors[hairId];
                 }
 
-                GameplayMod.Log.Msg($"{wardrobe.characterSex.characterName}: hair color: {hairColor}");
+                Core.LogInfo($"{wardrobe.characterSex.characterName}: hair color: {hairColor}");
 
                 wardrobe.HairMeshRenderer.sharedMaterial.SetColor("_Tip_Color", hairColor);
                 wardrobe.SkinCharacter.sharedMaterials[3].SetColor("_BaseColor", hairColor); */   // beard color
@@ -244,7 +244,7 @@ public class CharacterBodyRandomizerMod
                     eyesColor = combatEnemyManager.EyeColors[eyesId];
                 }
 
-                GameplayMod.Log.Msg($"{wardrobe.characterSex.characterName}: eyes color: {eyesColor}");
+                Core.LogDebug($"{wardrobe.characterSex.characterName}: eyes color: {eyesColor}");
 
                 wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisBaseColor", eyesColor);
                 wardrobe.SkinCharacter.sharedMaterials[2].SetColor("_IrisExtraColorAmount", eyesColor);
@@ -273,7 +273,6 @@ public class CharacterBodyRandomizerMod
                     wardrobe.SkinCharacter.sharedMaterials[0].SetColor("_Mask1_Bchannel_ColorAmountA", areolaColor);
                 }
 
-                GameplayMod.Log.Msg($"{characterSex.characterName} set body data...");
                 var back = new Vector3
                 {
                     x = body.Torso,
@@ -360,8 +359,6 @@ public class CharacterBodyRandomizerMod
                 };
                 wardrobe.Dick.transform.localScale = dick;
                 characterSex.DickSize = body.Dick;
-
-                GameplayMod.Log.Msg($"{characterSex.characterName} end set body");
                 #endregion Character body
 
                 #region Character make up
@@ -504,7 +501,7 @@ public class CharacterBodyRandomizerMod
             {
                 if (RandomUtils.Chance(ChanceForFuta.Value))
                 {
-                    GameplayMod.Log.Msg($"{characterSex.characterName} will use a dick");
+                    Core.LogInfo($"{characterSex.characterName} will use a dick");
 
                     wardrobe.SkinDick.sharedMesh = RandomUtils.Chance(ChanceForFullFuta.Value) ? wardrobe2.DickMesh : wardrobe2.DickHalfMesh;
                     Material material = UnityEngine.Object.Instantiate(wardrobe2.DickMatF);
@@ -514,7 +511,7 @@ public class CharacterBodyRandomizerMod
                 }
                 else
                 {
-                    GameplayMod.Log.Msg($"{characterSex.characterName} will use strapon");
+                    Core.LogInfo($"{characterSex.characterName} will use strapon");
 
                     wardrobe.SkinDick.sharedMesh = wardrobe2.StrapMesh;
                     Material material = UnityEngine.Object.Instantiate(wardrobe2.StrapMat);
@@ -527,7 +524,7 @@ public class CharacterBodyRandomizerMod
         }
         catch (Exception ex)
         {
-            GameplayMod.Log.Error(ex.Message);
+            Core.LogError( ex );
         }
     }
 
@@ -1334,7 +1331,7 @@ public class CharacterBodyRandomizerMod
             return;
         }
 
-        GameplayMod.Log.Msg($"{characterSex.characterName}: SetFutaState: {(characterSex.wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh ? "YES" : "No")}");
+        Core.LogInfo($"{characterSex.characterName}: SetFutaState: {(characterSex.wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh ? "YES" : "No")}");
 
         characterSex.IsFuta = characterSex.wardrobe.SkinDick.sharedMesh != wardrobe2.StrapMesh;
     }
@@ -1343,7 +1340,7 @@ public class CharacterBodyRandomizerMod
     {
         if (wardrobe.enemyData.customizationDATA.WearingHat)
         {
-            GameplayMod.Log.Msg("Hat");
+            Core.LogInfo("Hat");
             wardrobe.SetHairEnCreator(true);
             return;
         }
@@ -1354,14 +1351,14 @@ public class CharacterBodyRandomizerMod
         float extraBoobs = 0.0f;
         if (!isMale && RandomUtils.Chance(25))
         {
-            GameplayMod.Log.Msg("Extra boobs");
+            Core.LogInfo("Extra boobs");
             extraBoobs += 0.25f;
         }
 
         float extraBooty = 0f;
         if (!isMale && RandomUtils.Chance(25))
         {
-            GameplayMod.Log.Msg("Extra booty");
+            Core.LogInfo("Extra booty");
             extraBooty += 0.25f;
         }
 

@@ -12,8 +12,13 @@ internal static class UnloadService
     {
         try
         {
+            if (File.Exists(Path.Combine(Core.PluginResources, "Clothing.json")))
+            {
+                return;
+            }
+
             List<ClothesItem> clothingList = [];
-            UnloaderMod.Log.Msg("Try find clothes in Resources");
+            Core.LogInfo("Try find clothes in Resources");
             Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<UnityEngine.Object> clothesObj = Resources.FindObjectsOfTypeAll(Il2CppType.From(typeof(Clothing)));
             foreach (UnityEngine.Object clothingObj in clothesObj)
             {
@@ -31,21 +36,21 @@ internal static class UnloadService
             }
 
             clothingList.Sort();
-            UnloaderMod.Log.Msg($"Prepared {clothingList.Count}/{clothesObj.Count} clothes items");
-            if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "Clothing.json", clothingList, false))
+            Core.LogInfo($"Prepared {clothingList.Count}/{clothesObj.Count} clothes items");
+            if (JsonUtils.TrySerialize(Core.PluginResources, "Clothing.json", clothingList, false))
             {
-                UnloaderMod.Log.Msg($"Clothing.json was created in {UnloaderMod.PluginResources}");
-                File.WriteAllText($"{UnloaderMod.PluginResources}/Female_ClothingIds.txt", string.Join(", ", clothingList.Where(c => !c.ForMale).OrderBy(c => c.ID).Select(c => c.ID)));
-                File.WriteAllText($"{UnloaderMod.PluginResources}/Male_ClothingIds.txt", string.Join(", ", clothingList.Where(c => c.ForMale).OrderBy(c => c.ID).Select(c => c.ID)));
+                Core.LogSuccess($"Clothing.json was created in {Core.PluginResources}");
+                File.WriteAllText($"{Core.PluginResources}/Female_ClothingIds.txt", string.Join(", ", clothingList.Where(c => !c.ForMale).OrderBy(c => c.ID).Select(c => c.ID)));
+                File.WriteAllText($"{Core.PluginResources}/Male_ClothingIds.txt", string.Join(", ", clothingList.Where(c => c.ForMale).OrderBy(c => c.ID).Select(c => c.ID)));
             }
             else
             {
-                UnloaderMod.Log.Msg("Clothing.json was NOT created");
+                Core.LogInfo("Clothing.json was NOT created");
             }
         }
         catch (Exception ex)
         {
-            UnloaderMod.Log.Error(ex.Message);
+            Core.LogError( ex );
         }
     }
 
@@ -53,8 +58,13 @@ internal static class UnloadService
     {
         try
         {
+            if (File.Exists(Path.Combine(Core.PluginResources, "CombatBuffs.json")))
+            {
+                return;
+            }
+
             List<CombatBuffItem> buffList = [];
-            UnloaderMod.Log.Msg("Try find CombatBuff in Resources");
+            Core.LogInfo("Try find CombatBuff in Resources");
             Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<UnityEngine.Object> buffsObj = Resources.FindObjectsOfTypeAll(Il2CppType.From(typeof(CombatBuff)));
             foreach (UnityEngine.Object buffObj in buffsObj)
             {
@@ -71,19 +81,19 @@ internal static class UnloadService
                 return;
             }
 
-            UnloaderMod.Log.Msg($"Prepared {buffList.Count}/{buffsObj.Count} CombatBuff items");
-            if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "CombatBuffs.json", buffList, false))
+            Core.LogInfo($"Prepared {buffList.Count}/{buffsObj.Count} CombatBuff items");
+            if (JsonUtils.TrySerialize(Core.PluginResources, "CombatBuffs.json", buffList, false))
             {
-                UnloaderMod.Log.Msg($"CombatBuffs.json was created in {UnloaderMod.PluginResources}");
+                Core.LogSuccess($"CombatBuffs.json was created in {Core.PluginResources}");
             }
             else
             {
-                UnloaderMod.Log.Msg("CombatBuffs.json was NOT created");
+                Core.LogInfo("CombatBuffs.json was NOT created");
             }
         }
         catch (Exception ex)
         {
-            UnloaderMod.Log.Error(ex.Message);
+            Core.LogError( ex );
         }
     }
 
@@ -91,8 +101,13 @@ internal static class UnloadService
     {
         try
         {
+            if (File.Exists(Path.Combine(Core.PluginResources, "CombatTalents.json")))
+            {
+                return;
+            }
+
             List<CombatTalentItem> talentsList = [];
-            UnloaderMod.Log.Msg("Try find CombatTalents in Resources");
+            Core.LogInfo("Try find CombatTalents in Resources");
             Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<UnityEngine.Object> talentsObj = Resources.FindObjectsOfTypeAll(Il2CppType.From(typeof(CombatTalent)));
             foreach (UnityEngine.Object talentObj in talentsObj)
             {
@@ -109,19 +124,19 @@ internal static class UnloadService
                 return;
             }
 
-            UnloaderMod.Log.Msg($"Prepared {talentsList.Count}/{talentsObj.Count} CombatTalents items");
-            if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "CombatTalents.json", talentsList, false))
+            Core.LogInfo($"Prepared {talentsList.Count}/{talentsObj.Count} CombatTalents items");
+            if (JsonUtils.TrySerialize(Core.PluginResources, "CombatTalents.json", talentsList, false))
             {
-                UnloaderMod.Log.Msg($"CombatTalents.json was created in {UnloaderMod.PluginResources}");
+                Core.LogSuccess($"CombatTalents.json was created in {Core.PluginResources}");
             }
             else
             {
-                UnloaderMod.Log.Msg("CombatTalents.json was NOT created");
+                Core.LogInfo("CombatTalents.json was NOT created");
             }
         }
         catch (Exception ex)
         {
-            UnloaderMod.Log.Error(ex.Message);
+            Core.LogError( ex );
         }
     }
 
@@ -129,8 +144,13 @@ internal static class UnloadService
     {
         try
         {
+            if (File.Exists(Path.Combine(Core.PluginResources, "CombatActions.json")))
+            {
+                return;
+            }
+
             List<CombatActionItem> actionsList = [];
-            UnloaderMod.Log.Msg("Try find CombatAction in Resources");
+            Core.LogInfo("Try find CombatAction in Resources");
             Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<UnityEngine.Object> actionsObj = Resources.FindObjectsOfTypeAll(Il2CppType.From(typeof(CombatAction)));
             foreach (UnityEngine.Object actionObj in actionsObj)
             {
@@ -147,19 +167,19 @@ internal static class UnloadService
                 return;
             }
 
-            UnloaderMod.Log.Msg($"Prepared {actionsList.Count}/{actionsObj.Count} CombatAction items");
-            if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "CombatActions.json", actionsList, false))
+            Core.LogInfo($"Prepared {actionsList.Count}/{actionsObj.Count} CombatAction items");
+            if (JsonUtils.TrySerialize(Core.PluginResources, "CombatActions.json", actionsList, false))
             {
-                UnloaderMod.Log.Msg($"CombatActions.json was created in {UnloaderMod.PluginResources}");
+                Core.LogSuccess($"CombatActions.json was created in {Core.PluginResources}");
             }
             else
             {
-                UnloaderMod.Log.Msg("CombatActions.json was NOT created");
+                Core.LogInfo("CombatActions.json was NOT created");
             }
         }
         catch (Exception ex)
         {
-            UnloaderMod.Log.Error(ex.Message);
+            Core.LogError( ex );
         }
     }
 
@@ -167,8 +187,13 @@ internal static class UnloadService
     {
         try
         {
+            if (File.Exists(Path.Combine(Core.PluginResources, "CombatEnemyPassive.json")))
+            {
+                return;
+            }
+
             List<CombatEnemyPassiveItem> passivesList = [];
-            UnloaderMod.Log.Msg("Try find CombatEnemyPassive in Resources");
+            Core.LogInfo("Try find CombatEnemyPassive in Resources");
             Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<UnityEngine.Object> passivesObj = Resources.FindObjectsOfTypeAll(Il2CppType.From(typeof(CombatEnemyPassive)));
             foreach (UnityEngine.Object passiveObj in passivesObj)
             {
@@ -185,19 +210,19 @@ internal static class UnloadService
                 return;
             }
 
-            UnloaderMod.Log.Msg($"Prepared {passivesList.Count}/{passivesObj.Count} CombatEnemyPassive items");
-            if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "CombatEnemyPassive.json", passivesList, false))
+            Core.LogInfo($"Prepared {passivesList.Count}/{passivesObj.Count} CombatEnemyPassive items");
+            if (JsonUtils.TrySerialize(Core.PluginResources, "CombatEnemyPassive.json", passivesList, false))
             {
-                UnloaderMod.Log.Msg($"CombatEnemyPassive.json was created in {UnloaderMod.PluginResources}");
+                Core.LogSuccess($"CombatEnemyPassive.json was created in {Core.PluginResources}");
             }
             else
             {
-                UnloaderMod.Log.Msg("CombatEnemyPassive.json was NOT created");
+                Core.LogInfo("CombatEnemyPassive.json was NOT created");
             }
         }
         catch (Exception ex)
         {
-            UnloaderMod.Log.Error(ex.Message);
+            Core.LogError( ex );
         }
     }
 
@@ -209,86 +234,98 @@ internal static class UnloadService
             {
                 List<Models.InventoryItem> items = [];
 
-                items.Clear();
-                UnloaderMod.Log.Msg("Get CombatConsumables from CombatHolder");
-                foreach (CombatConsumable consumableItem in holder.consumables)
+                if (!File.Exists(Path.Combine(Core.PluginResources, "CombatConsumables.json")))
                 {
-                    items.Add(Models.InventoryItem.FromCombatConsumable(consumableItem));
-                }
-
-                if (items.Count > 0)
-                {
-                    if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "CombatConsumables.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false))
+                    items.Clear();
+                    Core.LogInfo("Get CombatConsumables from CombatHolder");
+                    foreach (CombatConsumable consumableItem in holder.consumables)
                     {
-                        UnloaderMod.Log.Msg($"CombatConsumables.json was created in {UnloaderMod.PluginResources}");
+                        items.Add(Models.InventoryItem.FromCombatConsumable(consumableItem));
                     }
-                    else
-                    {
-                        UnloaderMod.Log.Msg("CombatConsumables.json was NOT created");
-                    }
-                }
 
-                items.Clear();
-                UnloaderMod.Log.Msg("Get CombatTrinkets from CombatHolder");
-                foreach (CombatTrinket trinketItem in holder.trinkets)
-                {
-                    items.Add(Models.InventoryItem.FromCombatTrinket(trinketItem));
-                }
-
-                if (items.Count > 0)
-                {
-                    if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "CombatTrinkets.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false))
+                    if (items.Count > 0)
                     {
-                        UnloaderMod.Log.Msg($"CombatTrinkets.json was created in {UnloaderMod.PluginResources}");
-                    }
-                    else
-                    {
-                        UnloaderMod.Log.Msg("CombatTrinkets.json was NOT created");
+                        if (JsonUtils.TrySerialize(Core.PluginResources, "CombatConsumables.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false))
+                        {
+                            Core.LogSuccess($"CombatConsumables.json was created in {Core.PluginResources}");
+                        }
+                        else
+                        {
+                            Core.LogInfo("CombatConsumables.json was NOT created");
+                        }
                     }
                 }
 
-                items.Clear();
-                UnloaderMod.Log.Msg("Get CombatWeapons from CombatHolder");
-                foreach (CombatWeapon weaponItem in holder.weapons)
+                if (!File.Exists(Path.Combine(Core.PluginResources, "CombatTrinkets.json")))
                 {
-                    items.Add(Models.InventoryItem.FromCombatWeapon(weaponItem));
+                    items.Clear();
+                    Core.LogInfo("Get CombatTrinkets from CombatHolder");
+                    foreach (CombatTrinket trinketItem in holder.trinkets)
+                    {
+                        items.Add(Models.InventoryItem.FromCombatTrinket(trinketItem));
+                    }
+
+                    if (items.Count > 0)
+                    {
+                        if (JsonUtils.TrySerialize(Core.PluginResources, "CombatTrinkets.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false))
+                        {
+                            Core.LogSuccess($"CombatTrinkets.json was created in {Core.PluginResources}");
+                        }
+                        else
+                        {
+                            Core.LogInfo("CombatTrinkets.json was NOT created");
+                        }
+                    }
                 }
 
-                if (items.Count > 0)
+                if (!File.Exists(Path.Combine(Core.PluginResources, "CombatWeapons.json")))
                 {
-                    if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "CombatWeapons.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false))
+                    items.Clear();
+                    Core.LogInfo("Get CombatWeapons from CombatHolder");
+                    foreach (CombatWeapon weaponItem in holder.weapons)
                     {
-                        UnloaderMod.Log.Msg($"CombatWeapons.json was created in {UnloaderMod.PluginResources}");
+                        items.Add(Models.InventoryItem.FromCombatWeapon(weaponItem));
                     }
-                    else
+
+                    if (items.Count > 0)
                     {
-                        UnloaderMod.Log.Msg("CombatWeapons.json was NOT created");
+                        if (JsonUtils.TrySerialize(Core.PluginResources, "CombatWeapons.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false))
+                        {
+                            Core.LogSuccess($"CombatWeapons.json was created in {Core.PluginResources}");
+                        }
+                        else
+                        {
+                            Core.LogInfo("CombatWeapons.json was NOT created");
+                        }
                     }
                 }
 
-                items.Clear();
-                UnloaderMod.Log.Msg("Get QuestItems from CombatHolder");
-                foreach (CombatItem questItem in holder.questItems)
+                if (!File.Exists(Path.Combine(Core.PluginResources, "QuestItems.json")))
                 {
-                    items.Add(Models.InventoryItem.FromCombatItem(questItem));
-                }
-
-                if (items.Count > 0)
-                {
-                    if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "QuestItems.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false))
+                    items.Clear();
+                    Core.LogInfo("Get QuestItems from CombatHolder");
+                    foreach (CombatItem questItem in holder.questItems)
                     {
-                        UnloaderMod.Log.Msg($"QuestItems.json was created in {UnloaderMod.PluginResources}");
+                        items.Add(Models.InventoryItem.FromCombatItem(questItem));
                     }
-                    else
+
+                    if (items.Count > 0)
                     {
-                        UnloaderMod.Log.Msg("QuestItems.json was NOT created");
+                        if (JsonUtils.TrySerialize(Core.PluginResources, "QuestItems.json", items.OrderBy(i => i.Type).ThenBy(i => i.Name), false))
+                        {
+                            Core.LogSuccess($"QuestItems.json was created in {Core.PluginResources}");
+                        }
+                        else
+                        {
+                            Core.LogInfo("QuestItems.json was NOT created");
+                        }
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            UnloaderMod.Log.Error(ex.Message);
+            Core.LogError(ex);
         }
     }
 
@@ -314,18 +351,18 @@ internal static class UnloadService
                 colors.SkinTones.Add(ColorsList.Color.FromUnityColor(color));
             }
 
-            if (JsonUtils.TrySerialize(UnloaderMod.PluginResources, "ColorsList.json", colors, false))
+            if (JsonUtils.TrySerialize(Core.PluginResources, "ColorsList.json", colors, false))
             {
-                UnloaderMod.Log.Msg($"ColorsList.json was created in {UnloaderMod.PluginResources}");
+                Core.LogSuccess($"ColorsList.json was created in {Core.PluginResources}");
             }
             else
             {
-                UnloaderMod.Log.Msg("ColorsList.json was NOT created");
+                Core.LogInfo("ColorsList.json was NOT created");
             }
         }
         catch (Exception ex)
         {
-            UnloaderMod.Log.Error(ex.Message);
+            Core.LogError(ex);
         }
     }
 }

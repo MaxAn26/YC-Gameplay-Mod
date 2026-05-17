@@ -3,6 +3,8 @@ using Il2Cpp;
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Patches;
+
+[HarmonyPatch(typeof(SexEncounter))]
 internal class SexEncounterPatch
 {
     internal static bool Prepare()
@@ -18,14 +20,14 @@ internal class SexEncounterPatch
         }
         catch (Exception)
         {
-            GameplayMod.Log.Warning($"{nameof(SexEncounterPatch)} not applied due exeption");
+            Core.LogWarning($"{nameof(SexEncounterPatch)} not applied due exeption");
             return false;
         }
     }
 
     [HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetDicks))]
+    [HarmonyPatch(nameof(SexEncounter.SetDicks))]
     static bool SexEncounterSetDicksPrefix(ref SexEncounter __instance, bool __runOriginal)
     {
         GameFixMod.SexEncounerSetSexAnimation(ref __instance);
@@ -41,7 +43,7 @@ internal class SexEncounterPatch
 
     [HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.CounterAction))]
+    [HarmonyPatch(nameof(SexEncounter.CounterAction))]
     static bool SexEncounterCounterActionPrefix(SexEncounter __instance, bool __runOriginal, ref bool CasterChanged, ref int newSexID)
     {
         int SexId = CasterChanged
@@ -63,7 +65,7 @@ internal class SexEncounterPatch
 
     [HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.JoinThreesome))]
+    [HarmonyPatch(nameof(SexEncounter.JoinThreesome))]
     static bool SexEncounterJoinThreesomePrefix(SexEncounter __instance, bool __runOriginal, ref CharacterAttributes character, ref int newSexID)
     {
         if (!__runOriginal)
@@ -81,11 +83,11 @@ internal class SexEncounterPatch
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetSexAnimation))]
+    [HarmonyPatch(nameof(SexEncounter.SetSexAnimation))]
     static void SexEncounterSetSexAnimationPostfix(SexEncounter __instance) => RandomReverseMod.Apply(__instance);
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(SexEncounter), nameof(SexEncounter.SetThreesomeAnimation))]
+    [HarmonyPatch(nameof(SexEncounter.SetThreesomeAnimation))]
     static void SexEncounterSetThreesomeAnimationPostfix(SexEncounter __instance) => RandomReverseMod.Apply(__instance);
 }

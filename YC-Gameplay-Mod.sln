@@ -17,6 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решен
 		Directory.Build.targets = Directory.Build.targets
 		Directory.Packages.props = Directory.Packages.props
 		ModInfo.targets = ModInfo.targets
+		NuGet.config = NuGet.config
 		README.md = README.md
 	EndProjectSection
 EndProject

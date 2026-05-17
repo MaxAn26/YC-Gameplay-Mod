@@ -4,6 +4,8 @@ using YC.GameplayMod.Components;
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Patches;
+
+[HarmonyPatch(typeof(CharacterSex))]
 internal class CharacterSexPatch
 {
     internal static bool Prepare()
@@ -19,14 +21,14 @@ internal class CharacterSexPatch
         }
         catch (Exception)
         {
-            GameplayMod.Log.Warning($"{nameof(CharacterSexPatch)} not applied due exeption");
+            Core.LogWarning($"{nameof(CharacterSexPatch)} not applied due exeption");
             return false;
         }
     }
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(CharacterSex), nameof(CharacterSex.Start))]
+    [HarmonyPatch(nameof(CharacterSex.Start))]
     static void CharacterSexStartPostfix(CharacterSex __instance)
     {
         if (!string.IsNullOrWhiteSpace(__instance.characterName))
@@ -37,6 +39,6 @@ internal class CharacterSexPatch
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(CharacterSex), nameof(CharacterSex.SetDick))]
+    [HarmonyPatch(nameof(CharacterSex.SetDick))]
     static void CharacterSexSetDickPostfix(CharacterSex __instance, bool dickVisibility) => DickStraponVisibilityMod.SetDick(__instance, dickVisibility);
 }

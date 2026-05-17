@@ -22,7 +22,7 @@ internal class GameFixMod
         }
         catch (Exception ex)
         {
-            GameplayMod.Log.Error(ex.Message);
+            Core.LogError(ex);
         }
     }
 
@@ -46,7 +46,7 @@ internal class GameFixMod
                 sexEncounter.SexIsLickingTarget = false;
                 sexEncounter.SexIsOralTarget = false;
 
-                GameplayMod.Log.Msg($"Fix position ID {sexEncounter.SexID}");
+                Core.LogInfo($"Fix position ID {sexEncounter.SexID}");
 
                 if (sexEncounter.TargetSex.IsMale || sexEncounter.TargetSex.IsFuta)
                 {

@@ -1,11 +1,15 @@
 using HarmonyLib;
 using Il2Cpp;
+using MelonLoader;
 using YC.GameplayMod.Models;
 using YC.GameplayMod.Mods;
 
 namespace YC.GameplayMod.Patches;
+
+[HarmonyPatch(typeof(BattleManager))]
 internal class BattleManagerPatch
 {
+    [HarmonyPrepare]
     internal static bool Prepare()
     {
         try
@@ -17,16 +21,16 @@ internal class BattleManagerPatch
 
             return true;
         }
-        catch (System.Exception)
+        catch (System.Exception ex)
         {
-            GameplayMod.Log.Warning($"{nameof(BattleManagerPatch)} not applied due exeption");
+            MelonLogger.Warning($"{nameof(BattleManagerPatch)} not applied due exeption {ex.Message}");
             return false;
         }
     }
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.GetNewSexPosition))]
+    [HarmonyPatch(nameof(BattleManager.GetNewSexPosition))]
     static void BattleManagerGetNewSexPositionPostfix(CombatAction __0, ref int __result)
     {
         int newSexId = SexChoiceRealismMod.GetSexId(__0.caster.characterSex, __0.target.characterSex);
@@ -38,10 +42,10 @@ internal class BattleManagerPatch
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.GetNewSexPositionCharmed))]
+    [HarmonyPatch(nameof(BattleManager.GetNewSexPositionCharmed))]
     static void BattleManagerGetNewSexPositionCharmedPostfix(CombatAction __0, ref int __result)
     {
-        GameplayMod.Log.Msg("Request Charmed position");
+        Core.LogInfo("Request Charmed position");
         int newSexId = SexChoiceRealismMod.GetSexId(__0.caster.characterSex, __0.target.characterSex, PositionActionMode.Command);
         if (newSexId > 0)
         {
@@ -51,10 +55,10 @@ internal class BattleManagerPatch
 
     [HarmonyPostfix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.GetNewSexPositionSpanking))]
+    [HarmonyPatch(nameof(BattleManager.GetNewSexPositionSpanking))]
     static void BattleManagerGetNewSexPositionSpankingPostfix(CombatAction __0, ref int __result)
     {
-        GameplayMod.Log.Msg("Request Spanking position");
+        Core.LogInfo("Request Spanking position");
         int newSexId = SexChoiceRealismMod.GetSexId(__0.caster.characterSex, __0.target.characterSex, SexTag.Spanking);
         if (newSexId > 0)
         {
@@ -64,7 +68,7 @@ internal class BattleManagerPatch
 
     [HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.AssistAlly))]
+    [HarmonyPatch(nameof(BattleManager.AssistAlly))]
     static bool BattleManagerAssistAllyPrefix(bool __runOriginal, ref CombatAction action)
     {
         if (action is not null)
@@ -82,7 +86,7 @@ internal class BattleManagerPatch
 
     [HarmonyPrefix]
     [HarmonyWrapSafe]
-    [HarmonyPatch(typeof(BattleManager), nameof(BattleManager.ExecuteAction))]
+    [HarmonyPatch(nameof(BattleManager.ExecuteAction))]
     static bool BattleManagerExecuteActionPrefix(bool __runOriginal, CombatAction action)
     {
         if (action.actionType is 1 or 2)
@@ -90,7 +94,7 @@ internal class BattleManagerPatch
             GameExtendMod.BattleManagerExecuteAction(ref action);
         }
 
-        GameplayMod.Log.Msg($"Execute Action: {action.actionName}, Caster: {action.caster.characterName}, Target: {action.target?.characterName}");
+        Core.LogInfo($"Execute Action: {action.actionName}, Caster: {action.caster.characterName}, Target: {action.target?.characterName}");
 
         if (!__runOriginal)
         {

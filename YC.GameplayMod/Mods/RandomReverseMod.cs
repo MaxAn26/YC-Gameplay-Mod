@@ -40,7 +40,7 @@ internal class RandomReverseMod
         }
         catch (Exception ex)
         {
-            GameplayMod.Log.Error(ex.Message);
+            Core.LogError( ex );
         }
     }
 
@@ -104,7 +104,7 @@ internal class RandomReverseMod
         }
         catch (Exception ex)
         {
-            GameplayMod.Log.Error(ex.Message);
+            Core.LogError(ex);
             return;
         }
     }
@@ -112,6 +112,6 @@ internal class RandomReverseMod
     static void ActivateReverse(SexEncounter sexEncounter)
     {
         sexEncounter.ReverseMode = !sexEncounter.ReverseMode;
-        GameplayMod.Log.Msg("Reverse mod activated");
+        Core.LogInfo("Reverse mod activated");
     }
 }

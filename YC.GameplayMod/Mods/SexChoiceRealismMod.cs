@@ -56,7 +56,7 @@ internal class SexChoiceRealismMod
         }
         catch (Exception ex)
         {
-            GameplayMod.Log.Error(ex.Message);
+            Core.LogError( ex );
         }
     }
 
@@ -67,7 +67,7 @@ internal class SexChoiceRealismMod
             SexSystem = Zessentials.Instance.gameObject.GetComponentWithCast<SexSystem>();
 
             bool fromFile = false;
-            if (JsonUtils.TryDeserialize(GameplayMod.PluginResources, "SexMoves.json", out List<SexMoveExtended> extendedSexMoves))
+            if (JsonUtils.TryDeserialize(Core.PluginResources, "SexMoves.json", out List<SexMoveExtended> extendedSexMoves))
             {
                 fromFile = true;
             }
@@ -76,15 +76,11 @@ internal class SexChoiceRealismMod
             {
                 List<SexMoveExtended> poses = GetSexMoves();
                 poses.Sort();
-                if (JsonUtils.TrySerialize(GameplayMod.PluginResources, "SexMoves.json", poses))
+                if (JsonUtils.TrySerialize(Core.PluginResources, "SexMoves.json", poses))
                 {
                     extendedSexMoves = poses;
-                    GameplayMod.Log.Msg($"SexMoves.json was created in {GameplayMod.PluginResources}");
-                    File.WriteAllText($"{GameplayMod.PluginResources}/KnownIds.txt", string.Join(", ", extendedSexMoves.Select(m => m.ID)));
-                }
-                else
-                {
-                    GameplayMod.Log.Msg($"SexMoves.json was not created");
+                    Core.LogSuccess($"SexMoves.json was created in {Core.PluginResources}");
+                    File.WriteAllText($"{Core.PluginResources}/KnownIds.txt", string.Join(", ", extendedSexMoves.Select(m => m.ID)));
                 }
             }
             else if (UpdateMoves.Value)
@@ -110,15 +106,15 @@ internal class SexChoiceRealismMod
 
                 extendedSexMoves.Sort();
 
-                if (JsonUtils.TrySerialize(GameplayMod.PluginResources, "SexMoves.json", extendedSexMoves))
+                if (JsonUtils.TrySerialize(Core.PluginResources, "SexMoves.json", extendedSexMoves))
                 {
-                    GameplayMod.Log.Msg($"SexMoves.json was updated in {GameplayMod.PluginResources}");
-                    File.WriteAllText($"{GameplayMod.PluginResources}/KnownIds.txt", string.Join(", ", extendedSexMoves.Select(m => m.ID)));
-                    File.WriteAllText($"{GameplayMod.PluginResources}/NewIds.txt", string.Join(", ", newPoses));
+                    Core.LogSuccess($"SexMoves.json was updated in {Core.PluginResources}");
+                    File.WriteAllText($"{Core.PluginResources}/KnownIds.txt", string.Join(", ", extendedSexMoves.Select(m => m.ID)));
+                    File.WriteAllText($"{Core.PluginResources}/NewIds.txt", string.Join(", ", newPoses));
                 }
                 else
                 {
-                    GameplayMod.Log.Msg($"SexMoves.json was not updated");
+                    Core.LogInfo($"SexMoves.json was not updated");
                 }
                 UpdateMoves.Value = false;
             }
@@ -136,16 +132,16 @@ internal class SexChoiceRealismMod
                 }
             }
 
-            if (!JsonUtils.TryDeserialize(GameplayMod.PluginResources, "PersonalitySexTags.json", out List<PersonalitySexTags> personalitySexTypes))
+            if (!JsonUtils.TryDeserialize(Core.PluginResources, "PersonalitySexTags.json", out List<PersonalitySexTags> personalitySexTypes))
             {
                 personalitySexTypes = GetPersonalitySexTypes();
-                JsonUtils.TrySerialize(GameplayMod.PluginResources, "PersonalitySexTags.json", personalitySexTypes);
+                JsonUtils.TrySerialize(Core.PluginResources, "PersonalitySexTags.json", personalitySexTypes);
             }
             PersonalitySexTypes = personalitySexTypes;
         }
         catch (Exception ex)
         {
-            GameplayMod.Log.Error(ex.Message);
+            Core.LogError( ex );
         }
     }
 
@@ -157,19 +153,19 @@ internal class SexChoiceRealismMod
     {
         if (!Enabled.Value || SceneManager.GetActiveScene().buildIndex < 2)
         {
-            GameplayMod.Log.Msg("Exit due execute condition");
+            Core.LogInfo("Exit due execute condition");
             return -1;
         }
 
         if (casterSex is null || targetSex is null)
         {
-            GameplayMod.Log.Msg("Exit due casterSex OR targetSex is NULL");
+            Core.LogWarning("Exit due casterSex OR targetSex is NULL");
             return -1;
         }
 
         if (SexMoves.Count == 0)
         {
-            GameplayMod.Log.Msg("Exit due EMPTY SexPositions");
+            Core.LogWarning("Exit due EMPTY SexPositions");
             return -1;
         }
 
@@ -198,13 +194,13 @@ internal class SexChoiceRealismMod
         {
             if (casterSex.IsActive && !casterSex.IsFuta && !casterSex.IsMale)
             {
-                GameplayMod.Log.Msg($"{casterSex.characterName}: Reset Caster role for Foreplay");
+                Core.LogInfo($"{casterSex.characterName}: Reset Caster role for Foreplay");
                 casterSex.IsActive = false;
             }
 
             if (targetSex.IsActive && !targetSex.IsFuta && !targetSex.IsMale)
             {
-                GameplayMod.Log.Msg($"{casterSex.characterName}: Reset Target role for Foreplay");
+                Core.LogInfo($"{casterSex.characterName}: Reset Target role for Foreplay");
                 targetSex.IsActive = false;
             }
 
@@ -218,14 +214,14 @@ internal class SexChoiceRealismMod
 
         if (sexMoves.Count <= 0)
         {
-            GameplayMod.Log.Msg("Exit due EMPTY character sexMoves");
+            Core.LogWarning("Exit due EMPTY character sexMoves");
             return -1;
         }
 
         SexMoveExtended move = ChooseWeightedRandom(sexMoves);
         LastMove = move;
 
-        GameplayMod.Log.Msg($"SexID: {move?.ID ?? -1}; Caster role: {(casterSex.IsActive ? "Active" : "Passive")}; Target role: {(targetSex.IsActive ? "Active" : "Passive")}");
+        Core.LogInfo($"SexID: {move?.ID ?? -1}; Caster role: {(casterSex.IsActive ? "Active" : "Passive")}; Target role: {(targetSex.IsActive ? "Active" : "Passive")}");
         return move is not null ? move.ID : -1;
     }
 
@@ -240,12 +236,11 @@ internal class SexChoiceRealismMod
 
     private static List<SexMoveExtended> GetSexMoves()
     {
-        GameplayMod.Log.Msg("Creating SexMoves.json...");
+        Core.LogInfo("Creating SexMoves.json...");
         List<SexMoveExtended> poses = [];
 
         if (Zessentials.Instance.gameObject.TryGetComponentWithCast(out CombatHolder holder))
         {
-            GameplayMod.Log.Msg("Get SexMoves from CombatHolder");
             foreach (SexMove sexMove in holder.Sexmoves)
             {
                 if (holder.AvailableSexMoves.Contains(sexMove.ID))
@@ -266,12 +261,9 @@ internal class SexChoiceRealismMod
                     poses.Add(move);
                 }
             }
-
-            GameplayMod.Log.Msg($"Add {poses.Count} poses");
         }
         else
         {
-            GameplayMod.Log.Msg("Try find SexMoves in Resources");
             Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<UnityEngine.Object> sexMoveObj = Resources.FindObjectsOfTypeAll(Il2CppType.From(typeof(SexMove)));
             foreach (UnityEngine.Object moveObj in sexMoveObj)
             {
@@ -285,7 +277,6 @@ internal class SexChoiceRealismMod
                     }
                 }
             }
-            GameplayMod.Log.Msg($"Add {poses.Count}/{sexMoveObj.Count}");
         }
 
         poses.Sort();
@@ -468,7 +459,7 @@ internal class SexChoiceRealismMod
 
             PositionGroup group = RandomUtils.Chance(sexChance) ? PositionGroup.Sex : PositionGroup.Foreplay;
 
-            GameplayMod.Log.Msg($"Select Sex moves: Chance: {sexChance} => Type: {group}");
+            Core.LogInfo($"Select Sex moves: Chance: {sexChance} => Type: {group}");
             return group;
 
             static int GetBonus(GameplayModComponent component)
@@ -490,7 +481,7 @@ internal class SexChoiceRealismMod
         }
         catch (Exception ex)
         {
-            GameplayMod.Log.Error(ex);
+            Core.LogError(ex);
             return PositionGroup.Any;
         }
     }
@@ -571,7 +562,7 @@ internal class SexChoiceRealismMod
 
             sexMoves.Add((sexMove, score));
         }
-        GameplayMod.Log.Msg($"Selected Sex moves: {sexMoves.Count} / {SexMoves.Count}");
+        Core.LogDebug($"Selected Sex moves: {sexMoves.Count} / {SexMoves.Count}");
 
         return sexMoves;
     }
@@ -648,26 +639,6 @@ internal class SexChoiceRealismMod
                 score *= 2;
             }
         }
-
-        /*// SexTag moveTags = sexMove.SexTags;
-        //int tagsCount = 0;
-        //while (moveTags != 0) {
-        //    SexTag tag = moveTags & (SexTag)(-(int)moveTags);
-
-        //    if (sexMove.IsPerform) {
-        //        score += GetWeight(tag, personality.Perform);
-        //    }
-
-        //    if (sexMove.IsCommand) {
-        //        score += GetWeight(tag, personality.Command);
-        //    }
-
-        //    moveTags &= moveTags - 1;
-        //    tagsCount++;
-        //}
-
-        //if (tagsCount > 0)
-        //    score /= tagsCount;*/
 
         int modifier = sexMove.IsCommand && sexMove.IsPerform
             ? Math.Max(personality.Perform.Modifier, personality.Command.Modifier)

@@ -7,39 +7,21 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="LavaGang.MelonLoader" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\BaseMod.Core\BaseMod.Core.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Reference Include="0Harmony">
-			<HintPath>..\Libs\0Harmony.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
         <Reference Include="Assembly-CSharp">
             <HintPath>..\Libs\Assembly-CSharp.dll</HintPath>
         </Reference>
         <Reference Include="Il2Cppcom.gator-dragon-games.jigglephysics">
 		  <HintPath>..\Libs\Il2Cppcom.gator-dragon-games.jigglephysics.dll</HintPath>
-		</Reference>
-		<Reference Include="Il2CppInterop.Runtime">
-			<HintPath>..\Libs\Il2CppInterop.Runtime.dll</HintPath>
-			<Private>false</Private>
 		</Reference>		
 		<Reference Include="Il2CppMagicaClothV2">
 		  <HintPath>..\Libs\Il2CppMagicaClothV2.dll</HintPath>
 		</Reference>
-		<Reference Include="Il2Cppmscorlib">
-			<HintPath>..\Libs\Il2Cppmscorlib.dll</HintPath>
-		</Reference>
 		<Reference Include="UnityEngine.AnimationModule">
 			<HintPath>..\Libs\UnityEngine.AnimationModule.dll</HintPath>
-		</Reference>
-		<Reference Include="UnityEngine.CoreModule">
-			<HintPath>..\Libs\UnityEngine.CoreModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.PhysicsModule">
 			<HintPath>..\Libs\UnityEngine.PhysicsModule.dll</HintPath>

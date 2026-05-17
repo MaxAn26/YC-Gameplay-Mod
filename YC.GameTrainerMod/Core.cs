@@ -1,33 +1,31 @@
+using System.Runtime.CompilerServices;
 using BaseMod.Core.Extensions;
 using Il2Cpp;
 using Il2CppInterop.Runtime;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using MelonLoader;
+using MelonLoader.Logging;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using YC.GameTrainerMod;
-using YC.GameTrainerMod.Patches;
 
-[assembly: MelonInfo(typeof(GameTrainerMod), ModInfo.MOD_NAME, ModInfo.MOD_VERSION, ModInfo.MOD_DEVELOPER, ModInfo.MOD_URL)]
+[assembly: HarmonyDontPatchAll]
+[assembly: MelonInfo(typeof(Core), ModInfo.MOD_NAME, ModInfo.MOD_VERSION, ModInfo.MOD_DEVELOPER, ModInfo.MOD_URL)]
 [assembly: MelonGame(ModInfo.GAME_DEVELOPER, ModInfo.GAME_NAME)]
 
 namespace YC.GameTrainerMod;
-public class GameTrainerMod : MelonMod
+public class Core : MelonMod
 {
-    internal static MelonLogger.Instance Log;
-
     public override void OnInitializeMelon()
     {
-        base.OnInitializeMelon();
-
-        Log = LoggerInstance;
-
-        HarmonyInstance.PatchAll(typeof(CombatTalentInventoryPatch));
-
         MelonEvents.OnUpdate.Subscribe(TrainerOnUpdate, 100);
         MelonEvents.OnGUI.Subscribe(TrainerOnGUI, 100);
 
-        Log.Msg($"Mod {ModInfo.MOD_GUID} is loaded!");
+        HarmonyInstance.PatchAll();
+
+        base.OnInitializeMelon();
+
+        LogInfo($"Mod {ModInfo.MOD_GUID} is loaded!");
     }
 
     private void WriteConsole(string message)
@@ -206,7 +204,7 @@ public class GameTrainerMod : MelonMod
             {
                 if (!CharacterDataa.Instance.inventory.HasItem(newWeapon.itemName))
                 {
-                    Log.Msg($"Add weapon: {newWeapon.itemName}");
+                    LogInfo($"Add weapon: {newWeapon.itemName}");
                     CharacterDataa.Instance.inventory.AddItem(newWeapon.itemName, newWeapon.itemType, 1, 4, newWeapon.itemPrice);
                 }
             }
@@ -215,7 +213,7 @@ public class GameTrainerMod : MelonMod
         }
         catch (Exception e)
         {
-            Log.Error(e);
+            LogError(e);
         }
     }
 
@@ -250,7 +248,7 @@ public class GameTrainerMod : MelonMod
             {
                 if (!CharacterDataa.Instance.inventory.HasItem(newTrinket.itemName))
                 {
-                    Log.Msg($"Add trinket: {newTrinket.itemName}");
+                    LogInfo($"Add trinket: {newTrinket.itemName}");
                     CharacterDataa.Instance.inventory.AddItem(newTrinket.itemName, newTrinket.itemType, 1, 4, newTrinket.itemPrice);
                 }
             }
@@ -259,7 +257,7 @@ public class GameTrainerMod : MelonMod
         }
         catch (Exception e)
         {
-            Log.Error(e);
+            LogError(e);
         }
     }
 
@@ -278,7 +276,7 @@ public class GameTrainerMod : MelonMod
 
             foreach (CombatConsumable consumable in consumables)
             {
-                Log.Msg($"Add consumable: {consumable.itemName} x100");
+                LogInfo($"Add consumable: {consumable.itemName} x100");
                 CharacterDataa.Instance.inventory.AddItem(consumable.itemName, consumable.itemType, 100, consumable.itemQuality, consumable.itemPrice);
             }
 
@@ -287,7 +285,7 @@ public class GameTrainerMod : MelonMod
             {
                 if (!questItem.itemName.Equals("Credits"))
                 {
-                    Log.Msg($"Add consumable: {questItem.itemName} x100");
+                    LogInfo($"Add consumable: {questItem.itemName} x100");
                     CharacterDataa.Instance.inventory.AddItem(questItem.itemName, questItem.itemType, 100, questItem.itemQuality, questItem.itemPrice);
                 }
             }
@@ -296,7 +294,7 @@ public class GameTrainerMod : MelonMod
         }
         catch (Exception e)
         {
-            Log.Error(e);
+            LogError(e);
         }
     }
 
@@ -315,7 +313,7 @@ public class GameTrainerMod : MelonMod
 
             foreach (CombatConsumable consumable in consumables)
             {
-                Log.Msg($"Add consumable: {consumable.itemName} x100");
+                LogInfo($"Add consumable: {consumable.itemName} x100");
                 CharacterDataa.Instance.inventory.AddItem(consumable.itemName, consumable.itemType, 100, consumable.itemQuality, consumable.itemPrice);
             }
 
@@ -323,7 +321,7 @@ public class GameTrainerMod : MelonMod
         }
         catch (Exception e)
         {
-            Log.Error(e);
+            LogError(e);
         }
     }
 
@@ -355,7 +353,7 @@ public class GameTrainerMod : MelonMod
             {
                 if (!consumable.itemName.Equals("Sex databook") && !CharacterDataa.Instance.inventory.HasItem(consumable.itemName) && !IsKnown(consumable.consumableEffectAlternative))
                 {
-                    Log.Msg($"Add consumable: {consumable.itemName}");
+                    LogInfo($"Add consumable: {consumable.itemName}");
                     CharacterDataa.Instance.inventory.AddItem(consumable.itemName, consumable.itemType, 1, consumable.itemQuality, consumable.itemPrice);
                 }
             }
@@ -364,7 +362,7 @@ public class GameTrainerMod : MelonMod
         }
         catch (Exception e)
         {
-            Log.Error(e);
+            LogError(e);
         }
 
         static bool IsKnown(string manualName)
@@ -413,7 +411,7 @@ public class GameTrainerMod : MelonMod
         }
         catch (Exception e)
         {
-            Log.Error(e);
+            LogError(e);
         }
     }
 
@@ -424,4 +422,16 @@ public class GameTrainerMod : MelonMod
         WriteConsole($"God Mode: {(IsGodMode ? "Activated" : "Deactivated")}");
     }
     #endregion Shift mathods
+
+    public static void LogTrace(string message, [CallerMemberName] string methodName = null) => MelonLogger.Msg(ColorARGB.DarkGray, Combine(message, methodName));
+
+    public static void LogDebug(string message, [CallerMemberName] string methodName = null) => MelonLogger.Msg(ColorARGB.Cyan, Combine(message, methodName));
+
+    public static void LogInfo(string message, [CallerMemberName] string methodName = null) => MelonLogger.Msg(ColorARGB.White, Combine(message, methodName));
+    public static void LogSuccess(string message, [CallerMemberName] string methodName = null) => MelonLogger.Msg(ColorARGB.Green, Combine(message, methodName));
+    public static void LogWarning(string message, [CallerMemberName] string methodName = null) => MelonLogger.Warning(Combine(message, methodName));
+    public static void LogError(Exception excepion, [CallerMemberName] string methodName = null) => LogError(excepion.Message, excepion, methodName);
+    public static void LogError(string message, Exception excepion, [CallerMemberName] string methodName = null) => MelonLogger.Error(Combine(message, methodName), excepion);
+
+    private static string Combine(string message, string methodName) => !string.IsNullOrWhiteSpace(methodName) ? $"{methodName}:> {message}" : message;
 }
