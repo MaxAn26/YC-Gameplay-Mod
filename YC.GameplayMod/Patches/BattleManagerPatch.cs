@@ -1,6 +1,7 @@
 using HarmonyLib;
 using Il2Cpp;
 using MelonLoader;
+using YC.GameplayMod.Enums;
 using YC.GameplayMod.Models;
 using YC.GameplayMod.Mods;
 

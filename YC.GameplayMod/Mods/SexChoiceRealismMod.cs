@@ -8,6 +8,7 @@ using MelonLoader;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using YC.GameplayMod.Components;
+using YC.GameplayMod.Enums;
 using YC.GameplayMod.Models;
 
 namespace YC.GameplayMod.Mods;
@@ -540,7 +541,7 @@ internal class SexChoiceRealismMod
                 continue;
             }
 
-            if (sexMove.IsThreesome && ((sexMove.AssistGender & assistGender) == 0 || (sexMove.AssistRole & assistRole) == 0))
+            if (sexMove.IsThreesome && ((sexMove.Assist.Gender & assistGender) == 0 || (sexMove.Assist.Role & assistRole) == 0))
             {
                 continue;
             }
@@ -579,8 +580,8 @@ internal class SexChoiceRealismMod
     private static bool CheckMainRolesAndGenders(SexMoveExtended sexMove, CharacterGender casterGender, CharacterRole casterRole, CharacterGender targetGender, CharacterRole targetRole)
     {
         // Обычная проверка
-        if ((sexMove.CasterGender & casterGender) != 0 && (sexMove.CasterRole & casterRole) != 0
-            && (sexMove.TargetGender & targetGender) != 0 && (sexMove.TargetRole & targetRole) != 0)
+        if ((sexMove.Caster.Gender & casterGender) != 0 && (sexMove.Caster.Role & casterRole) != 0
+            && (sexMove.Target.Gender & targetGender) != 0 && (sexMove.Target.Role & targetRole) != 0)
         {
             return true;
         }
@@ -588,8 +589,8 @@ internal class SexChoiceRealismMod
         // Реверс только если поза универсальная
         if (sexMove.IsCommand && sexMove.IsPerform)
         {
-            if ((sexMove.CasterGender & targetGender) != 0 && (sexMove.CasterRole & targetRole) != 0
-                && (sexMove.TargetGender & casterGender) != 0 && (sexMove.TargetRole & casterRole) != 0)
+            if ((sexMove.Caster.Gender & targetGender) != 0 && (sexMove.Caster.Role & targetRole) != 0
+                && (sexMove.Target.Gender & casterGender) != 0 && (sexMove.Target.Role & casterRole) != 0)
             {
                 return true;
             }

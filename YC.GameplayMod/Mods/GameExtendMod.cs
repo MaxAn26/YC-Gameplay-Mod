@@ -334,11 +334,11 @@ internal class GameExtendMod
         CharacterAttributes target = null;
         if (combatAction.caster.IsCompanion(false) && !combatAction.target.IsCompanion())
         {
-            target = ChooseAttackTarget(combatAction, [.. Zessentials.Instance.GetAllFreeEnemyTargets()]);
+            target = ChooseAttackTarget(combatAction, [.. Zessentials.Instance.battleManager.GetValidTargets(false, true)]);
         }
         else if (combatAction.caster.IsEnemy() && combatAction.target.IsCompanion())
         {
-            target = ChooseAttackTarget(combatAction, [.. Zessentials.Instance.GetAllFreePlayerTargets()]);
+            target = ChooseAttackTarget(combatAction, [.. Zessentials.Instance.battleManager.GetValidTargets(true, false)]);
 
         }
 

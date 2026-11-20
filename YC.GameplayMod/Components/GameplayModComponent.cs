@@ -4,6 +4,7 @@ using Il2Cpp;
 using Il2CppInterop.Runtime.Attributes;
 using Il2CppInterop.Runtime.Injection;
 using UnityEngine;
+using YC.GameplayMod.Enums;
 using YC.GameplayMod.Models;
 using YC.GameplayMod.Mods;
 

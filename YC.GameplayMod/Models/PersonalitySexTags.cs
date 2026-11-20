@@ -1,3 +1,5 @@
+using YC.GameplayMod.Enums;
+
 namespace YC.GameplayMod.Models;
 internal class PersonalitySexTags
 {

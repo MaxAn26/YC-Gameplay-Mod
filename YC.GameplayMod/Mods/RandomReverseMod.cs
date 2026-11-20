@@ -3,6 +3,7 @@ using BaseMod.Core.Utils;
 using Il2Cpp;
 using MelonLoader;
 using UnityEngine.SceneManagement;
+using YC.GameplayMod.Extensions;
 
 namespace YC.GameplayMod.Mods;
 internal class RandomReverseMod
@@ -58,7 +59,7 @@ internal class RandomReverseMod
                 return;
             }
 
-            if (sexEncounter.CasterSex.IsCharmed || sexEncounter.CasterAttributes.CheckForStatus("Charmed"))
+            if (sexEncounter.CasterSex.IsCharmed())
             {
                 return;
             }
@@ -89,8 +90,8 @@ internal class RandomReverseMod
             }
 
             if (AlwaysWhenCharmed.Value
-                && (sexEncounter.TargetSex.IsCharmed && !sexEncounter.CasterSex.IsCharmed
-                    || sexEncounter.CasterSex.IsCharmed && !sexEncounter.TargetSex.IsCharmed))
+                && (sexEncounter.TargetSex.IsCharmed() && !sexEncounter.CasterSex.IsCharmed()
+                    || sexEncounter.CasterSex.IsCharmed() && !sexEncounter.TargetSex.IsCharmed()))
             {
                 ActivateReverse(sexEncounter);
                 return;

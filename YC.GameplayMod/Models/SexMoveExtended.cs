@@ -1,11 +1,11 @@
 using System.Text.Json.Serialization;
 using Il2Cpp;
+using YC.GameplayMod.Enums;
 
 namespace YC.GameplayMod.Models;
 internal class SexMoveExtended : IComparable<SexMoveExtended>
 {
-    private CharacterGender _assistGender = CharacterGender.Any;
-    private CharacterRole _assistRole = CharacterRole.Any;
+    private Character _assist = new();
 
     public bool IsDisabled { get; set; }
     public int Type { get; set; }
@@ -13,44 +13,24 @@ internal class SexMoveExtended : IComparable<SexMoveExtended>
     public string Name { get; set; }
     public string Description { get; set; }
 
-    [JsonPropertyName("AssistGender")]
-    public CharacterGender? AssistGenderJson
+    [JsonPropertyName("Assist")]
+    public Character Assist
     {
-        get => IsThreesome ? _assistGender : null;
+        get => IsThreesome ? _assist : null;
         set
         {
             if (value is not null)
             {
-                _assistGender = value.Value;
+                _assist = value;
             }
         }
     }
 
-    [JsonPropertyName("AssistRole")]
-    public CharacterRole? AssistRoleJson
-    {
-        get => IsThreesome ? _assistRole : null;
-        set
-        {
-            if (value is not null)
-            {
-                _assistRole = value.Value;
-            }
-        }
-    }
-
-    public CharacterGender CasterGender { get; set; } = CharacterGender.Any;
-    public CharacterRole CasterRole { get; set; } = CharacterRole.Any;
-    public CharacterGender TargetGender { get; set; } = CharacterGender.Any;
-    public CharacterRole TargetRole { get; set; } = CharacterRole.Any;
+    public Character Caster { get; set; } = new();
+    public Character Target { get; set; } = new();
     public bool IsCommand { get; set; }
     public bool IsPerform { get; set; }
     public SexTag SexTags { get; set; }
-
-    [JsonIgnore]
-    public CharacterGender AssistGender { get; set; } = CharacterGender.Any;
-    [JsonIgnore]
-    public CharacterRole AssistRole { get; set; } = CharacterRole.Any;
 
     [JsonIgnore]
     internal bool IsThreesome => ID >= 1000;
@@ -118,6 +98,8 @@ internal class SexMoveExtended : IComparable<SexMoveExtended>
             ID = sexMove.ID,
             Name = sexMove.Name,
             Description = sexMove.Description,
+            Caster = new(),
+            Target = new(),
             IsCommand = sexMove.isCommand,
             IsPerform = sexMove.isPerform,
             SexTags = SexTag.None
@@ -175,77 +157,32 @@ internal class SexMoveExtended : IComparable<SexMoveExtended>
 
         if (sexMove.TagFemdom == sexMove.TagMaledom)
         {
-            sexMoveExtended.CasterGender = CharacterGender.Any;
-            sexMoveExtended.CasterRole = CharacterRole.Any;
+            sexMoveExtended.Caster.Gender = CharacterGender.Any;
+            sexMoveExtended.Caster.Role = CharacterRole.Any;
         }
         else if (sexMove.TagFemdom)
         {
-            sexMoveExtended.CasterGender = CharacterGender.Female | CharacterGender.Futa;
-            sexMoveExtended.CasterRole = CharacterRole.Passive;
+            sexMoveExtended.Caster.Gender = CharacterGender.Female | CharacterGender.Futa;
+            sexMoveExtended.Caster.Role = CharacterRole.Passive;
         }
         else if (sexMove.TagMaledom)
         {
-            sexMoveExtended.CasterGender = CharacterGender.Male | CharacterGender.Futa;
-            sexMoveExtended.CasterRole = CharacterRole.Active;
+            sexMoveExtended.Caster.Gender = CharacterGender.Male | CharacterGender.Futa;
+            sexMoveExtended.Caster.Role = CharacterRole.Active;
         }
         else
         {
-            sexMoveExtended.CasterGender = CharacterGender.Any;
-            sexMoveExtended.CasterRole = CharacterRole.Any;
+            sexMoveExtended.Caster.Gender = CharacterGender.Any;
+            sexMoveExtended.Caster.Role = CharacterRole.Any;
         }
 
         return sexMoveExtended;
     }
-}
 
-[Flags]
-internal enum SexTag
-{
-    None = 0,
-    Dominant = 1 << 0,
-    Generic = 1 << 1,
-    Rough = 1 << 2,
-    Sensual = 1 << 3,
-    Service = 1 << 4,
-    Smothering = 1 << 5,
-    Spanking = 1 << 6,
-    Universal = 1 << 7,
-    Wresting = 1 << 8
-}
-
-[Flags]
-internal enum PositionGroup
-{
-    None = 0,
-    Foreplay = 1 << 0,
-    Sex = 1 << 1,
-    Any = Foreplay | Sex,
-}
-
-[Flags]
-internal enum PositionActionMode
-{
-    None = 0,
-    Command = 1 << 0,
-    Perform = 1 << 1,
-    Any = Command | Perform,
-}
-
-[Flags]
-internal enum CharacterGender
-{
-    None = 0,
-    Female = 1 << 0,
-    Futa = 1 << 1,
-    Male = 1 << 2,
-    Any = Female | Futa | Male
-}
-
-[Flags]
-internal enum CharacterRole
-{
-    None = 0,
-    Active = 1 << 0,
-    Passive = 1 << 1,
-    Any = Active | Passive
+    internal class Character
+    {
+        public CharacterCumCondition Cum { get; set; } = CharacterCumCondition.Always;
+        public CharacterGender Gender { get; set; } = CharacterGender.Any;
+        public CharacterRole Role { get; set; } = CharacterRole.Any;
+    }
 }
